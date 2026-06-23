@@ -52,46 +52,49 @@ Help people spend less time deciding and more time doing.
 ### Visual language — Retro Pop-Art
 Derived from the app icon (three overlapping cards bursting out of a comic starburst). The whole app leans into a **bold, hand-drawn, Keith-Haring / pop-art** feel:
 
-- **Thick ink outlines** (`#141414`, ~3–4px) around cards, buttons, and key shapes.
-- **Hard "sticker" shadows** — solid offset drops (not soft blur) on primary elements.
-- **Cream surfaces** (`#F9F1D9`) as the off-white card/border color instead of pure white.
-- **Burst & comic accents** — starburst shapes, action/speed lines, "pow" energy on celebrations.
-- **Chunky rounded corners** + heavy type. Glass (expo-glass-effect) is layered *over* this for an iOS-26 sheen, but the base is tactile and printed-poster bold.
+**The app interior is clean iOS 26 — dark & vivid, flat.** The loud retro pop-art
+lives in the **app icon only**; inside, the brand colors come through as neon
+accents on a calm dark base. Personality is carried by **color + motion +
+haptics**, not decoration.
 
-Every section keeps this language; only the dominant color + background motion change.
+Rules:
+- **One dark base everywhere** (`#0D0B14`). Pages differ by content + accent color, **not** by full-page theming.
+- **Flat. No glow, no gradients, no drop shadows.** Depth comes from translucency and hairline borders only.
+- **Glass cards:** translucent white fill (`rgba(255,255,255,0.06)`) with a 1px hairline edge (`rgba(255,255,255,0.12)`).
+- **iOS-26 liquid-glass tab bar** (system `NativeTabs`), tinted to brand purple.
+- **Rounded, heavy type** for headlines; brand color used on the small section label + key words.
+- **Vivid accents** — pink/orange/teal/yellow used boldly but sparingly (buttons, labels, stats).
 
-### Section Themes
-| Section  | Color   | Hex       | Vibe                          |
-|----------|---------|-----------|-------------------------------|
-| Home     | Purple  | `#5626B9` | Social dashboard, floating shapes |
-| Create   | Orange  | `#F66314` | Game-show energy, large buttons |
-| Swipe    | Ink     | `#141414` | Dark arcade, bold cards, haptics |
-| Results  | Pink    | `#F02F78` | Celebration, confetti, victory |
-| Friends  | Teal    | `#38D6B5` | Scrapbook, memories, polaroids |
-| Profile  | Indigo  | `#301B5F` | Player card, statistics, achievements |
-
-### Color Palette (sampled from the icon)
+### Color Palette (brand accents, sampled from the icon)
 | Token  | Hex / Value             | Role |
 |--------|-------------------------|------|
-| Purple | `#5626B9`               | Brand / Home background, primary |
-| Yellow | `#FBCD12`               | Burst, highlights, rewards |
-| Pink   | `#F02F78`               | Primary action, Results |
-| Orange | `#F66314`               | Create, energy accents |
-| Indigo | `#301B5F`               | Deep shade, Profile, shadows |
-| Teal   | `#38D6B5`               | Friends section |
-| Cream  | `#F9F1D9`               | Surfaces, card fills, off-white |
-| Ink    | `#141414`               | Outlines, text, Swipe background |
-| Glass  | `rgba(255,255,255,0.12)`| Liquid-glass overlays |
+| Base   | `#0D0B14`               | App background (everywhere) |
+| Surface| `rgba(255,255,255,0.06)`| Glass card fill |
+| Border | `rgba(255,255,255,0.12)`| Hairline edges |
+| Text   | `#F4F2F8`               | Primary text on dark |
+| Purple | `#6D28FF`               | Tab tint / brand |
+| Pink   | `#F02F78`               | Home accent, primary action |
+| Orange | `#F66314`               | Create accent |
+| Teal   | `#38D6B5`               | Profile accent, stats |
+| Yellow | `#FBCD12`               | Highlights, rewards |
+
+### Section accents (shared dark base)
+| Tab     | Accent | Hex       |
+|---------|--------|-----------|
+| Home    | Pink   | `#F02F78` |
+| Create  | Orange | `#F66314` |
+| Profile | Teal   | `#38D6B5` |
 
 ### Typography
-Rounded fonts — SF Rounded, Nunito, or Fredoka. Large headlines, heavy weights (700–900).
+Rounded fonts — SF Rounded (iOS `ui-rounded`), Nunito, or Fredoka. Large headlines, heavy weights (700–900).
 
 ---
 
 ## 6. Screens & Flows
 
 ### Navigation
-Floating liquid-glass tab bar: **Home · Explore · Create · Friends · Profile**
+Floating liquid-glass tab bar (iOS-26 system `NativeTabs`): **Home · Create · Profile**.
+Sharing is link-only, so there's no Friends tab; browsing/Explore folds into Home.
 
 ### Splash
 Animated speech bubbles, small haptic, Callit logo reveal.

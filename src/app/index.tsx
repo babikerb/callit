@@ -1,98 +1,141 @@
-import * as Device from 'expo-device';
-import { Platform, StyleSheet } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import BottomSheet, { BottomSheetTextInput, BottomSheetView } from '@gorhom/bottom-sheet';
+import * as Haptics from 'expo-haptics';
+import * as Location from 'expo-location';
+import { router } from 'expo-router';
+import { Search } from 'lucide-react-native';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
+import MapView, { PROVIDER_DEFAULT } from 'react-native-maps';
 
-import { AnimatedIcon } from '@/components/animated-icon';
-import { HintRow } from '@/components/hint-row';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { WebBadge } from '@/components/web-badge';
-import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
+import { CATEGORIES } from '@/constants/categories';
+import { colors, radius, spacing, type } from '@/theme/tokens';
 
-function getDevMenuHint() {
-  if (Platform.OS === 'web') {
-    return <ThemedText type="small">use browser devtools</ThemedText>;
-  }
-  if (Device.isDevice) {
-    return (
-      <ThemedText type="small">
-        shake device or press <ThemedText type="code">m</ThemedText> in terminal
-      </ThemedText>
-    );
-  }
-  const shortcut = Platform.OS === 'android' ? 'cmd+m (or ctrl+m)' : 'cmd+d';
-  return (
-    <ThemedText type="small">
-      press <ThemedText type="code">{shortcut}</ThemedText>
-    </ThemedText>
-  );
-}
+// Sensible default until we have the user's location.
+const DEFAULT_REGION = {
+  latitude: 37.7749,
+  longitude: -122.4194,
+  latitudeDelta: 0.05,
+  longitudeDelta: 0.05,
+};
 
 export default function HomeScreen() {
+  const mapRef = useRef<MapView>(null);
+  const snapPoints = useMemo(() => ['22%', '55%', '92%'], []);
+  const [query, setQuery] = useState('');
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted' || cancelled) return;
+      const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+      if (cancelled) return;
+      mapRef.current?.animateToRegion(
+        {
+          latitude: loc.coords.latitude,
+          longitude: loc.coords.longitude,
+          latitudeDelta: 0.04,
+          longitudeDelta: 0.04,
+        },
+        700,
+      );
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   return (
-    <ThemedView style={styles.container}>
-      <SafeAreaView style={styles.safeArea}>
-        <ThemedView style={styles.heroSection}>
-          <AnimatedIcon />
-          <ThemedText type="title" style={styles.title}>
-            Welcome to&nbsp;Expo
-          </ThemedText>
-        </ThemedView>
+    <View style={{ flex: 1, backgroundColor: colors.bg }}>
+      <MapView
+        ref={mapRef}
+        provider={PROVIDER_DEFAULT}
+        style={StyleSheet.absoluteFill}
+        initialRegion={DEFAULT_REGION}
+        showsUserLocation
+        showsMyLocationButton={false}
+        showsCompass={false}
+        userInterfaceStyle="dark"
+      />
 
-        <ThemedText type="code" style={styles.code}>
-          get started
-        </ThemedText>
+      <BottomSheet
+        index={1}
+        snapPoints={snapPoints}
+        backgroundStyle={{ backgroundColor: colors.bgElevated }}
+        handleIndicatorStyle={{ backgroundColor: colors.textMuted }}>
+        <BottomSheetView style={styles.sheet}>
+          <View style={styles.searchBar}>
+            <Search size={18} color={colors.textMuted} strokeWidth={2.5} />
+            <BottomSheetTextInput
+              placeholder="Search places near you"
+              placeholderTextColor={colors.textMuted}
+              value={query}
+              onChangeText={setQuery}
+              style={[type.body, styles.searchInput]}
+            />
+          </View>
 
-        <ThemedView type="backgroundElement" style={styles.stepContainer}>
-          <HintRow
-            title="Try editing"
-            hint={<ThemedText type="code">src/app/index.tsx</ThemedText>}
-          />
-          <HintRow title="Dev tools" hint={getDevMenuHint()} />
-          <HintRow
-            title="Fresh start"
-            hint={<ThemedText type="code">npm run reset-project</ThemedText>}
-          />
-        </ThemedView>
-
-        {Platform.OS === 'web' && <WebBadge />}
-      </SafeAreaView>
-    </ThemedView>
+          <Text style={[type.label, styles.sectionLabel]}>Start a Call</Text>
+          <View style={styles.chips}>
+            {CATEGORIES.map((c) => (
+              <Pressable
+                key={c.key}
+                onPress={() => {
+                  Haptics.selectionAsync();
+                  router.push({ pathname: '/create', params: { category: c.key } });
+                }}
+                style={styles.chip}>
+                <c.Icon size={18} color={colors.text} strokeWidth={2.25} />
+                <Text style={[type.body, { color: colors.text }]}>{c.label}</Text>
+              </Pressable>
+            ))}
+          </View>
+        </BottomSheetView>
+      </BottomSheet>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  sheet: {
     flex: 1,
-    justifyContent: 'center',
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.sm,
+    gap: spacing.lg,
+  },
+  searchBar: {
     flexDirection: 'row',
-  },
-  safeArea: {
-    flex: 1,
-    paddingHorizontal: Spacing.four,
     alignItems: 'center',
-    gap: Spacing.three,
-    paddingBottom: BottomTabInset + Spacing.three,
-    maxWidth: MaxContentWidth,
+    gap: spacing.sm,
+    backgroundColor: colors.surface,
+    borderRadius: radius.pill,
+    borderWidth: 1,
+    borderColor: colors.border,
+    paddingHorizontal: spacing.md,
   },
-  heroSection: {
-    alignItems: 'center',
-    justifyContent: 'center',
+  searchInput: {
     flex: 1,
-    paddingHorizontal: Spacing.four,
-    gap: Spacing.four,
+    paddingVertical: 14,
+    color: colors.text,
   },
-  title: {
-    textAlign: 'center',
-  },
-  code: {
+  sectionLabel: {
+    color: colors.textMuted,
     textTransform: 'uppercase',
   },
-  stepContainer: {
-    gap: Spacing.three,
-    alignSelf: 'stretch',
-    paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.four,
-    borderRadius: Spacing.four,
+  chips: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+  },
+  chip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    borderRadius: radius.pill,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
 });

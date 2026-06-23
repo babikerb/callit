@@ -1,31 +1,27 @@
 import { NativeTabs } from 'expo-router/unstable-native-tabs';
-import { useColorScheme } from 'react-native';
 
-import { Colors } from '@/constants/theme';
+import { palette, sections } from '@/theme/tokens';
 
+/**
+ * Callit's three sections in the iOS-26 floating liquid-glass tab bar (the
+ * system default). Clean and native; selected items tint to the brand purple.
+ */
 export default function AppTabs() {
-  const scheme = useColorScheme();
-  const colors = Colors[scheme === 'unspecified' ? 'light' : scheme];
-
   return (
-    <NativeTabs
-      backgroundColor={colors.background}
-      indicatorColor={colors.backgroundElement}
-      labelStyle={{ selected: { color: colors.text } }}>
+    <NativeTabs tintColor={palette.purple}>
       <NativeTabs.Trigger name="index">
-        <NativeTabs.Trigger.Label>Home</NativeTabs.Trigger.Label>
-        <NativeTabs.Trigger.Icon
-          src={require('@/assets/images/tabIcons/home.png')}
-          renderingMode="template"
-        />
+        <NativeTabs.Trigger.Label>{sections.home.label}</NativeTabs.Trigger.Label>
+        <NativeTabs.Trigger.Icon sf={sections.home.sf} />
       </NativeTabs.Trigger>
 
-      <NativeTabs.Trigger name="explore">
-        <NativeTabs.Trigger.Label>Explore</NativeTabs.Trigger.Label>
-        <NativeTabs.Trigger.Icon
-          src={require('@/assets/images/tabIcons/explore.png')}
-          renderingMode="template"
-        />
+      <NativeTabs.Trigger name="create">
+        <NativeTabs.Trigger.Label>{sections.create.label}</NativeTabs.Trigger.Label>
+        <NativeTabs.Trigger.Icon sf={sections.create.sf} />
+      </NativeTabs.Trigger>
+
+      <NativeTabs.Trigger name="profile">
+        <NativeTabs.Trigger.Label>{sections.profile.label}</NativeTabs.Trigger.Label>
+        <NativeTabs.Trigger.Icon sf={sections.profile.sf} />
       </NativeTabs.Trigger>
     </NativeTabs>
   );
