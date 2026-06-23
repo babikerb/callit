@@ -1,3 +1,4 @@
+# Manual iOS build: Actions tab -> "iOS Build" -> Run workflow -> pick a profile.
 name: iOS Build (local on macOS runner)
 
 on:
