@@ -4,11 +4,18 @@
     "appVersionSource": "remote"
   },
   "build": {
+    "base": {
+      "env": {
+        "SENTRY_DISABLE_AUTO_UPLOAD": "true"
+      }
+    },
     "development": {
+      "extends": "base",
       "developmentClient": true,
       "distribution": "internal"
     },
     "preview": {
+      "extends": "base",
       "distribution": "internal",
       "channel": "production",
       "ios": {
@@ -16,6 +23,7 @@
       }
     },
     "production": {
+      "extends": "base",
       "channel": "production",
       "autoIncrement": true
     }
