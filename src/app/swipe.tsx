@@ -109,11 +109,17 @@ export default function SwipeScreen() {
       { rotate: `${interpolate(x.value, [-W, W], [-12, 12], 'clamp')}deg` },
     ],
   }));
-  const behindStyle = useAnimatedStyle(() => {
-    const progress = Math.min((Math.abs(x.value) + Math.abs(y.value)) / SWIPE_X, 1);
+  // Second card fans in toward center as the top card is dragged away.
+  const secondStyle = useAnimatedStyle(() => {
+    const p = Math.min((Math.abs(x.value) + Math.abs(y.value)) / SWIPE_X, 1);
     return {
-      transform: [{ scale: interpolate(progress, [0, 1], [0.94, 1]) }, { translateY: interpolate(progress, [0, 1], [14, 0]) }],
-      opacity: interpolate(progress, [0, 1], [0.5, 1]),
+      transform: [
+        { translateX: interpolate(p, [0, 1], [18, 0]) },
+        { translateY: interpolate(p, [0, 1], [14, 0]) },
+        { rotate: `${interpolate(p, [0, 1], [6, 0])}deg` },
+        { scale: interpolate(p, [0, 1], [0.95, 1]) },
+      ],
+      opacity: interpolate(p, [0, 1], [0.92, 1]),
     };
   });
   const yesBadge = useAnimatedStyle(() => ({ opacity: interpolate(x.value, [0, SWIPE_X], [0, 1], 'clamp') }));
@@ -154,32 +160,42 @@ export default function SwipeScreen() {
         ) : (
           <>
             <View style={styles.deck}>
-              {deck.slice(index, index + 2).reverse().map((place, i, arr) => {
-                const isTop = i === arr.length - 1;
-                if (!isTop) {
+              {deck
+                .slice(index, index + 3)
+                .map((place, depth) => ({ place, depth }))
+                .reverse()
+                .map(({ place, depth }) => {
+                  if (depth === 2) {
+                    return (
+                      <Animated.View key={place.id} style={[styles.cardWrap, styles.thirdCard]}>
+                        <SwipeCard place={place} />
+                      </Animated.View>
+                    );
+                  }
+                  if (depth === 1) {
+                    return (
+                      <Animated.View key={place.id} style={[styles.cardWrap, secondStyle]}>
+                        <SwipeCard place={place} />
+                      </Animated.View>
+                    );
+                  }
                   return (
-                    <Animated.View key={place.id} style={[styles.cardWrap, behindStyle]}>
-                      <SwipeCard place={place} />
-                    </Animated.View>
+                    <GestureDetector key={place.id} gesture={pan}>
+                      <Animated.View style={[styles.cardWrap, topStyle]}>
+                        <Animated.View style={[styles.badge, styles.badgeLeft, { borderColor: palette.teal }, yesBadge]}>
+                          <Text style={[type.heading, { color: palette.teal }]}>YES</Text>
+                        </Animated.View>
+                        <Animated.View style={[styles.badge, styles.badgeRight, { borderColor: palette.pink }, noBadge]}>
+                          <Text style={[type.heading, { color: palette.pink }]}>NO</Text>
+                        </Animated.View>
+                        <Animated.View style={[styles.badge, styles.badgeTop, { borderColor: palette.yellow }, loveBadge]}>
+                          <Text style={[type.heading, { color: palette.yellow }]}>LOVE</Text>
+                        </Animated.View>
+                        <SwipeCard place={place} />
+                      </Animated.View>
+                    </GestureDetector>
                   );
-                }
-                return (
-                  <GestureDetector key={place.id} gesture={pan}>
-                    <Animated.View style={[styles.cardWrap, topStyle]}>
-                      <Animated.View style={[styles.badge, styles.badgeLeft, { borderColor: palette.teal }, yesBadge]}>
-                        <Text style={[type.heading, { color: palette.teal }]}>YES</Text>
-                      </Animated.View>
-                      <Animated.View style={[styles.badge, styles.badgeRight, { borderColor: palette.pink }, noBadge]}>
-                        <Text style={[type.heading, { color: palette.pink }]}>NO</Text>
-                      </Animated.View>
-                      <Animated.View style={[styles.badge, styles.badgeTop, { borderColor: palette.yellow }, loveBadge]}>
-                        <Text style={[type.heading, { color: palette.yellow }]}>LOVE</Text>
-                      </Animated.View>
-                      <SwipeCard place={place} />
-                    </Animated.View>
-                  </GestureDetector>
-                );
-              })}
+                })}
             </View>
 
             <View style={styles.actions}>
@@ -264,6 +280,10 @@ const styles = StyleSheet.create({
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: spacing.xl },
   deck: { flex: 1, margin: spacing.lg },
   cardWrap: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 },
+  thirdCard: {
+    transform: [{ translateX: -18 }, { translateY: 26 }, { rotate: '-6deg' }, { scale: 0.9 }],
+    opacity: 0.8,
+  },
   badge: {
     position: 'absolute',
     zIndex: 10,

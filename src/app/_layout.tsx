@@ -22,7 +22,7 @@ export default function RootLayout() {
           <AnimatedSplashOverlay />
           <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.bg } }}>
             <Stack.Screen name="(tabs)" />
-            <Stack.Screen name="swipe" options={{ presentation: 'card' }} />
+            <Stack.Screen name="swipe" options={{ presentation: 'card', gestureEnabled: false }} />
           </Stack>
         </ThemeProvider>
       </QueryClientProvider>
