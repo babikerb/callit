@@ -1,4 +1,4 @@
-import { useLocalSearchParams } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { Text, View } from 'react-native';
 
@@ -63,7 +63,11 @@ export default function CreateScreen() {
         ))}
       </Card>
 
-      <Button label="Create Call" color={palette.orange} />
+      <Button
+        label="Create Call"
+        color={palette.orange}
+        onPress={() => router.push({ pathname: '/swipe', params: { category } })}
+      />
     </Screen>
   );
 }

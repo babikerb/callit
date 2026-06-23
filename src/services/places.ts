@@ -17,21 +17,15 @@ const OVERPASS_URL = 'https://overpass-api.de/api/interpreter';
 /** OSM node filters per category. */
 const FILTERS: Record<string, string[]> = {
   food: ['node["amenity"="restaurant"]', 'node["amenity"="fast_food"]'],
-  boba: ['node["cuisine"="bubble_tea"]', 'node["shop"="bubble_tea"]', 'node["amenity"="cafe"]'],
-  coffee: ['node["amenity"="cafe"]'],
+  cafe: ['node["amenity"="cafe"]', 'node["cuisine"="bubble_tea"]', 'node["shop"="bubble_tea"]'],
   dessert: ['node["amenity"="ice_cream"]', 'node["shop"="pastry"]', 'node["shop"="confectionery"]'],
   activities: [
     'node["leisure"="bowling_alley"]',
     'node["amenity"="cinema"]',
     'node["leisure"="amusement_arcade"]',
   ],
-  study: ['node["amenity"="library"]', 'node["amenity"="cafe"]'],
-  anything: [
-    'node["amenity"="restaurant"]',
-    'node["amenity"="cafe"]',
-    'node["amenity"="fast_food"]',
-    'node["amenity"="bar"]',
-  ],
+  // Fallback for any unknown category key.
+  anything: ['node["amenity"="restaurant"]', 'node["amenity"="cafe"]', 'node["amenity"="fast_food"]'],
 };
 
 type OverpassElement = {
