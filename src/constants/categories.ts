@@ -1,10 +1,8 @@
 import {
-  BookOpen,
   Coffee,
   CupSoda,
   Gamepad2,
   IceCreamCone,
-  Sparkles,
   Utensils,
   type LucideIcon,
 } from 'lucide-react-native';
@@ -22,8 +20,6 @@ export const CATEGORIES: Category[] = [
   { key: 'coffee', label: 'Coffee', Icon: Coffee },
   { key: 'dessert', label: 'Dessert', Icon: IceCreamCone },
   { key: 'activities', label: 'Activities', Icon: Gamepad2 },
-  { key: 'study', label: 'Study', Icon: BookOpen },
-  { key: 'anything', label: 'Anything', Icon: Sparkles },
 ];
 
 export const CATEGORY_BY_KEY = Object.fromEntries(

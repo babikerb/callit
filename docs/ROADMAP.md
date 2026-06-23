@@ -16,10 +16,10 @@ The V1 build is broken into **6 phases**. Each phase ends with something runnabl
 - ✅ **All** project dependencies installed up front (so only one dev build is ever needed) — see below
 - ✅ Native config wired in `app.json`: bundle id `com.babiker.callit`, Apple Sign In, location/notification permissions, AdMob test IDs, Sentry, bottom-tabs
 - ✅ `eas.json` build profiles + `build:ios:*` npm scripts; **iOS is the primary target**
-- ⬜ *(you)* Publish to GitHub, run `eas init`, add `EXPO_TOKEN` repo secret
-- ⬜ Make **one** dev build: `eas build -p ios --profile development` (or via the Actions workflow), install on device — reused for all phases
+- ✅ Published to GitHub, `eas init` linked (`@bbabiker/callit`), `EXPO_TOKEN` secret set
+- ✅ Dev build made and installed on device — reused for all phases (JS hot-reloads)
 
-**Build check:** `npm run ios` opens the app in the dev client.
+**Build check:** `npm run ios` opens the app in the dev client. ✅
 
 ### Installed dependencies (all phases)
 - **UI/Animation:** expo-glass-effect (native liquid glass — used instead of @callstack/liquid-glass), expo-blur, react-native-svg, lucide-react-native, react-native-reanimated, react-native-worklets, react-native-gesture-handler, @gorhom/bottom-sheet, react-native-bottom-tabs, react-native-confetti-cannon, react-native-toast-message
@@ -33,86 +33,68 @@ The V1 build is broken into **6 phases**. Each phase ends with something runnabl
 
 ---
 
-## Phase 1 — Design System & Shell ⬜
-*The look, feel, and navigation skeleton. No real data yet.*
+## Phase 1 — Design System & Shell ✅
+*The look, feel, and navigation skeleton.*
 
-- Theme system: color tokens, per-section themes (Home/Create/Swipe/Results/Friends/Profile), typography (rounded font), spacing, glass/shadow tokens
-- Reusable components: `GlassCard`, `Button`, `Pill/Tag`, `Header`, floating liquid-glass tab bar
-- Tab navigation: Home · Explore · Create · Friends · Profile (placeholder screens, correct themes)
-- Splash screen (animated bubbles + haptic) and 3-page onboarding
-- Zustand `themeStore`
+- ✅ Clean iOS-26 dark theme tokens (`src/theme/tokens.ts`): palette, accents, spacing, radius, type. Flat — no glow/gradient/shadow.
+- ✅ UI kit: `Card`, `Button`, `Screen`, `CategoryTile`.
+- ✅ Tabs: Home · Create · Profile (iOS-26 glass `NativeTabs`, purple tint).
+- ✅ Home launchpad (category grid → Create, + Join), Create configure step, Profile placeholder.
+- ⬜ Splash + onboarding (optional — likely skipped given how simple the launchpad is).
 
-**Build check:** Navigate all 5 tabs; onboarding shows on first launch; each section has its own color identity.
-
----
-
-## Phase 2 — Auth & Profile ⬜
-*Who the user is, including guests.*
-
-- Firebase project + config; Firebase Auth wired up
-- Continue with Apple / Google / Guest
-- Zustand `userStore`; guest-vs-account capability gating (guests can't save/notify/create groups)
-- Profile screen shell with stats placeholders + achievements layout
-- `users` Firestore collection (profile docs for non-guests)
-
-**Build check:** Sign in via each method, see profile, sign out; guest restrictions enforced.
+**Build check:** ✅ Navigate all three tabs; pick a category to reach Create.
 
 ---
 
-## Phase 3 — Create a Call & Lobby ⬜
-*Start a decision and gather the group.*
+## Phase 2 — Swipe Prototype ⬜  ← NEXT
+*The core mechanic, front-end only. No backend, no accounts, no new build.*
 
-- Create flow: choose category (Food, Boba) → filters (radius, open now, rating, price) → create → share link
-- `calls`, `participants`, `inviteLinks` Firestore collections + creation logic
-- Lobby screen: members, progress, invite button, filters
-- Deep link `callit.app/c/ABCD` → join Call (route handling; install fallback later)
-- Zustand `callsStore`; react-query for reads
+- Pull nearby places from the OSM service (`src/services/places.ts`, already built) for the chosen category.
+- Swipe cards: name, distance, **static map placeholder** (plain image), photo when available (expo-image).
+- Gestures (gesture-handler) + animations (reanimated): left = No, right = Yes, up = Love it. Big haptics, card stack.
+- Local match tally + a simple results screen at the end.
 
-**Build check:** Create a Call on one device, open the link on another, both appear in the lobby.
-
----
-
-## Phase 4 — Swipe Engine ⬜
-*The core loop: everyone votes.*
-
-- Places fetch: OpenStreetMap primary (Geoapify fallback) for the chosen category + filters
-- Swipe cards: image, name, rating, distance (expo-image)
-- Gestures (gesture-handler) + animations (reanimated): left = No, right = Yes, up = Love it
-- Large haptics on swipe; card stack physics
-- Write `votes` to Firestore; track per-member progress in lobby
-
-**Build check:** Group swipes through real nearby places; votes persist; lobby progress updates live.
+**Build check:** Pick a category, swipe a stack of real nearby places, see your picks tallied.
 
 ---
 
-## Phase 5 — Results, Tie-Breaker & Winner ⬜
+## Phase 3 — Live Calls (backend) ⬜
+*Make a Call real and multi-person. Settles the backend.*
+
+- Firebase **anonymous** auth (device identity, no sign-in screens) + Firestore.
+- Create Call → `calls`/`inviteLinks`; share link; deep link `callit.app/c/ABCD` to join.
+- Lobby: live participants + per-person swipe progress (Firestore realtime).
+- Everyone swipes the same place set; `votes` sync live.
+
+**Build check:** Create on one device, join via link on another, both swipe and votes sync.
+
+---
+
+## Phase 4 — Results, Tie-Breaker & Winner ⬜
 *Reveal the decision and celebrate.*
 
-- Match computation (Cloud Function or client) → 100% / 75% / 50% buckets
-- Animated results reveal + confetti (react-native-confetti-cannon)
-- Tie-breaker final round over remaining options
-- Winner screen: directions (react-native-map-link), share, save, celebrate
-- Recent Calls history (for accounts)
+- Match computation → 100% / 75% / 50% buckets.
+- Animated reveal + confetti (react-native-confetti-cannon).
+- Tie-breaker final round; Winner screen: directions (react-native-map-link), share, celebrate.
 
 **Build check:** Finish a Call end-to-end and reach a winner with directions.
 
 ---
 
-## Phase 6 — Notifications, Ads, Monetization & Polish ⬜
-*Production-readiness for V1 launch.*
+## Phase 5 — Notifications, Ads, Accounts, Plus & Polish ⬜
+*Production-readiness for launch.*
 
-- expo-notifications: friend joined, match found, voting complete, reminder
-- AdMob (react-native-google-mobile-ads): home feed, completed calls, guests — **never during voting**
-- RevenueCat (react-native-purchases): Callit Plus (no ads, unlimited groups, advanced filters, premium themes)
-- Analytics (posthog) + crash reporting (Sentry)
-- Deep-link install fallback (App Store → continue after install), toasts, empty/error states, final motion polish
+- expo-notifications: someone joined, match found, voting complete.
+- AdMob: after a Call completes / between Calls — **never during voting**.
+- **Accounts return here** (Apple/Google) + RevenueCat Callit Plus (no ads, advanced filters, themes) + Profile stats.
+- Analytics (posthog) + crash reporting (Sentry, enable source maps), deep-link install fallback, toasts, empty/error states, final motion polish.
 
-**Build check:** Notifications fire, ads show in allowed spots only, Plus purchase removes ads — ready for TestFlight.
+**Build check:** Notifications fire, ads only in allowed spots, Plus removes ads — ready for TestFlight.
 
 ---
 
 ## After V1
-- **V2:** Activities · Coffee · Statistics · Saved groups (Friends) · Premium themes
+- **V2:** Notifications · Ads · Accounts · Callit Plus · Profile stats
 - **V3:** Scheduling · Availability · AI suggestions · Shared calendars
 - **Future:** Widgets · Live Activities · Share/iMessage extensions · Apple Watch · Streaks · Achievements
 

@@ -21,7 +21,7 @@ Help people spend less time deciding and more time doing.
 
 1. Create a Call.
 2. Share the link.
-3. Friends join.
+3. People join via the link.
 4. Everyone swipes.
 5. Matches appear.
 6. Group decides.
@@ -49,9 +49,7 @@ Help people spend less time deciding and more time doing.
 
 ---
 
-### Visual language — Retro Pop-Art
-Derived from the app icon (three overlapping cards bursting out of a comic starburst). The whole app leans into a **bold, hand-drawn, Keith-Haring / pop-art** feel:
-
+### Visual language — Clean iOS 26 (Dark & Vivid)
 **The app interior is clean iOS 26 — dark & vivid, flat.** The loud retro pop-art
 lives in the **app icon only**; inside, the brand colors come through as neon
 accents on a calm dark base. Personality is carried by **color + motion +
@@ -97,20 +95,21 @@ Floating liquid-glass tab bar (iOS-26 system `NativeTabs`): **Home · Create · 
 Sharing is link-only, so there's no Friends tab; browsing/Explore folds into Home.
 
 ### Splash
-Animated speech bubbles, small haptic, Callit logo reveal.
+Animated Callit icon reveal (cards + starburst), small haptic.
 
-### Onboarding
+### Onboarding (optional for V1)
 1. WHAT'S FOR DINNER?
 2. EVERYONE SWIPES.
 3. THE GROUP DECIDES.
 
-### Authentication
-- Continue with Apple
-- Continue with Google
-- Continue as Guest
+Kept lightweight; may be cut given how self-explanatory the launchpad is.
 
-**Guest users CAN:** join Calls, swipe, vote, view results.
-**Guest users CANNOT:** save history, receive notifications, create groups.
+### Authentication — deferred for V1
+Given the app is one-shot and ephemeral (no history, no friends, link-only
+sharing, guests can fully participate), **V1 ships account-less**: a lightweight
+device identity, no sign-in screens. Accounts (Apple / Google) come back **when
+premium ships**, since RevenueCat needs a stable identity to remember entitlements
+— plus optionally a persistent name + avatar so you're recognizable in a lobby.
 
 ### Home Screen
 A clean **launchpad**, not a feed: headline "What are we deciding?", the category
@@ -143,24 +142,18 @@ Reveal at 100% / 75% / 50% match. Animated reveal + confetti.
 Final round over remaining options.
 
 ### Winner Screen
-Directions · Share · Save · Celebrate.
-
-### Friends
-Saved groups · Recent people · Favorites.
+Directions · Share · Celebrate.
 
 ### Profile
 Statistics: calls created, votes, favorite category, match percentage. Achievements.
+(No friends list — sharing is link-only.)
 
 ---
 
 ## 7. Categories
-- **FOOD** — Restaurants, Fast food, Late night
-- **BOBA**
-- **COFFEE**
-- **DESSERT**
-- **ACTIVITIES** — Bowling, Movies, Arcades
-- **STUDY**
-- **ANYTHING**
+Shipping set (V1): **Food · Boba · Coffee · Dessert · Activities**.
+Removed Study and Anything (too vague for a places-based decision).
+More can be added later (e.g. Bars, Late night).
 
 ---
 
@@ -174,51 +167,53 @@ Statistics: calls created, votes, favorite category, match percentage. Achieveme
 
 | Concern        | Choice |
 |----------------|--------|
-| Framework      | React Native + Expo + TypeScript |
+| Framework      | React Native + Expo (SDK 56) + TypeScript |
 | Routing        | expo-router |
-| Navigation     | react-native-bottom-tabs, native-stack |
-| UI             | @callstack/liquid-glass, @gorhom/bottom-sheet, expo-blur, react-native-svg, lucide-react-native |
+| Navigation     | expo-router `NativeTabs` (iOS-26 liquid glass) + native-stack |
+| UI             | expo-glass-effect, @gorhom/bottom-sheet, expo-blur, react-native-svg, lucide-react-native |
 | Animation      | react-native-reanimated, react-native-worklets |
 | Gestures       | react-native-gesture-handler |
 | Haptics        | expo-haptics |
 | Images         | expo-image |
 | Forms          | react-hook-form |
-| State          | Zustand (User, Calls, Notifications, Theme) |
+| State          | Zustand (Call, Theme) |
 | Data fetching  | @tanstack/react-query |
-| Auth           | Firebase Auth + expo-auth-session |
-| Database       | Firestore |
-| Storage        | Firebase Storage |
+| Auth           | **Deferred for V1.** Firebase (anonymous → Apple/Google) when premium ships |
+| Database       | Firestore (for live multi-person Calls) |
 | Functions      | Cloud Functions |
 | Notifications  | expo-notifications |
 | Analytics      | posthog-react-native |
-| Crash reporting| @sentry/react-native |
+| Crash reporting| @sentry/react-native (source-map upload disabled until configured) |
 | Ads            | react-native-google-mobile-ads (AdMob) |
 | Subscriptions  | react-native-purchases (RevenueCat) |
-| Maps/Directions| react-native-map-link |
+| Directions     | react-native-map-link (deep-links out to Maps) |
+| Static map     | plain image on swipe cards — **no native maps library** (react-native-maps was removed) |
 | Toasts         | react-native-toast-message |
 | Confetti       | react-native-confetti-cannon |
-| Places API     | OpenStreetMap (primary) · Geoapify (secondary) · Yelp (optional) — **avoid Google Places** |
+| Places API     | OpenStreetMap / Overpass (primary, keyless) · Geoapify (secondary) · Yelp (optional) — **avoid Google Places** |
 
 ### Firestore Collections
-`users` · `calls` · `participants` · `votes` · `friendships` · `groups` · `notifications` · `inviteLinks`
+`calls` · `participants` · `votes` · `inviteLinks` · `notifications`
+(No `users`/`friendships`/`groups` in V1 — account-less and link-only.)
 
 ---
 
 ## 10. Monetization
 
-- **Free:** join, create, vote.
-- **Callit Plus:** no ads, unlimited groups, advanced filters, premium themes.
-- **Ads (never interrupt voting):** home feed, completed calls, guests. Formats: native, interstitial, rewarded.
+- **Free:** create, join, swipe, decide.
+- **Callit Plus:** no ads, advanced filters, premium themes. (Requires accounts — ships alongside auth.)
+- **Ads (never interrupt voting):** after a Call completes, between Calls. Formats: native, interstitial, rewarded.
 
 ---
 
 ## 11. Release Scope
 
-### V1
-Restaurants · Boba · Guest mode · Swiping · Results · Notifications · Ads.
+### V1 (current focus)
+Food · Boba · Coffee · Dessert · Activities · account-less/device identity ·
+create + share-link · live lobby · swiping · results/winner. iOS-first.
 
 ### V2
-Activities · Coffee · Statistics · Saved groups · Premium.
+Notifications · Ads · Accounts (Apple/Google) · Callit Plus · Profile stats.
 
 ### V3
 Scheduling · Availability · AI suggestions · Shared calendars.
