@@ -113,7 +113,11 @@ Animated speech bubbles, small haptic, Callit logo reveal.
 **Guest users CANNOT:** save history, receive notifications, create groups.
 
 ### Home Screen
-Sections: Active Calls · Invitations · Recent Calls · Trending.
+A clean **launchpad**, not a feed: headline "What are we deciding?", the category
+grid (tap one to start a Call), and a "Join a Call" affordance for a shared code.
+No Active/Recent Calls (decisions are one-shot and ephemeral). No map on Home —
+a **static map placeholder belongs on each swipe card**, rendered later as a plain
+image (no native maps library, so no extra dev build).
 
 ### Create Flow
 1. Choose category
