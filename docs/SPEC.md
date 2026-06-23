@@ -44,41 +44,47 @@ Help people spend less time deciding and more time doing.
 - **NOT:** Corporate, professional, productivity-focused.
 - **Feels like:** Kahoot, Nintendo, Duolingo, Discord, iOS 26 — fun, fast, animated, tactile.
 
-### Logo
-Three speech bubbles; negative space creates a **C**. Represents multiple opinions becoming one decision.
-
-### App Icon (later)
-Purple-pink gradient, three overlapping speech bubbles, glass highlights, soft shadows, retro shape language. Should feel like Kahoot / Discord — not Yelp / OpenTable.
+### Logo / App Icon ✅
+**Three overlapping cards** (orange, indigo, pink) fanned out, bursting from a **yellow comic starburst** on a purple field, with thick black ink outlines and cream card borders. The cards = everyone's options/choices; the burst = the energy of the group making the call. Pop-art / Keith-Haring vibe — feels like Kahoot / Discord, not Yelp / OpenTable. File: `assets/images/icon.png`.
 
 ---
 
-## 5. Design System
+### Visual language — Retro Pop-Art
+Derived from the app icon (three overlapping cards bursting out of a comic starburst). The whole app leans into a **bold, hand-drawn, Keith-Haring / pop-art** feel:
 
-Every section has its own personality. **Shared:** typography, glass, rounded corners, shadows, motion. **Different per section:** colors, backgrounds, animations.
+- **Thick ink outlines** (`#141414`, ~3–4px) around cards, buttons, and key shapes.
+- **Hard "sticker" shadows** — solid offset drops (not soft blur) on primary elements.
+- **Cream surfaces** (`#F9F1D9`) as the off-white card/border color instead of pure white.
+- **Burst & comic accents** — starburst shapes, action/speed lines, "pow" energy on celebrations.
+- **Chunky rounded corners** + heavy type. Glass (expo-glass-effect) is layered *over* this for an iOS-26 sheen, but the base is tactile and printed-poster bold.
+
+Every section keeps this language; only the dominant color + background motion change.
 
 ### Section Themes
-| Section  | Color   | Vibe                          |
-|----------|---------|-------------------------------|
-| Home     | Purple  | Social dashboard, floating shapes |
-| Create   | Orange  | Game-show energy, large buttons |
-| Swipe    | Dark    | Dark arcade, bold cards, haptics |
-| Results  | Pink    | Celebration, confetti, victory |
-| Friends  | Teal    | Scrapbook, memories, polaroids |
-| Profile  | Indigo  | Player card, statistics, achievements |
+| Section  | Color   | Hex       | Vibe                          |
+|----------|---------|-----------|-------------------------------|
+| Home     | Purple  | `#5626B9` | Social dashboard, floating shapes |
+| Create   | Orange  | `#F66314` | Game-show energy, large buttons |
+| Swipe    | Ink     | `#141414` | Dark arcade, bold cards, haptics |
+| Results  | Pink    | `#F02F78` | Celebration, confetti, victory |
+| Friends  | Teal    | `#38D6B5` | Scrapbook, memories, polaroids |
+| Profile  | Indigo  | `#301B5F` | Player card, statistics, achievements |
 
-### Color Palette
-| Token  | Hex / Value             |
-|--------|-------------------------|
-| Purple | `#6D28FF`               |
-| Pink   | `#FF4FB3`               |
-| Orange | `#FF8B3D`               |
-| Yellow | `#FFD84D`               |
-| Teal   | `#38D6B5`               |
-| Dark   | `#101014`               |
-| Glass  | `rgba(255,255,255,0.12)`|
+### Color Palette (sampled from the icon)
+| Token  | Hex / Value             | Role |
+|--------|-------------------------|------|
+| Purple | `#5626B9`               | Brand / Home background, primary |
+| Yellow | `#FBCD12`               | Burst, highlights, rewards |
+| Pink   | `#F02F78`               | Primary action, Results |
+| Orange | `#F66314`               | Create, energy accents |
+| Indigo | `#301B5F`               | Deep shade, Profile, shadows |
+| Teal   | `#38D6B5`               | Friends section |
+| Cream  | `#F9F1D9`               | Surfaces, card fills, off-white |
+| Ink    | `#141414`               | Outlines, text, Swipe background |
+| Glass  | `rgba(255,255,255,0.12)`| Liquid-glass overlays |
 
 ### Typography
-Rounded fonts — SF Rounded, Nunito, or Fredoka. Large headlines, heavy weights.
+Rounded fonts — SF Rounded, Nunito, or Fredoka. Large headlines, heavy weights (700–900).
 
 ---
 
