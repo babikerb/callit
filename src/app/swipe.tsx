@@ -59,7 +59,16 @@ export default function SwipeScreen() {
 
   const deck = useMemo(() => {
     const withDistance = places.map((p) => ({ ...p, distance: coords ? distanceMeters(coords, p) : undefined }));
-    return withDistance.sort((a, b) => (a.distance ?? 1e9) - (b.distance ?? 1e9)).slice(0, 30);
+    const sorted = withDistance.sort((a, b) => (a.distance ?? 1e9) - (b.distance ?? 1e9));
+    // Collapse same-named spots (chains) to just the closest one.
+    const seen = new Set<string>();
+    const unique = sorted.filter((p) => {
+      const key = p.name.trim().toLowerCase();
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+    return unique.slice(0, 30);
   }, [places, coords]);
 
   const recordAndAdvance = (dir: Decision) => {
