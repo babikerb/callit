@@ -1,16 +1,22 @@
 {
   "expo": {
-    "name": "callit-scaffold",
-    "slug": "callit-scaffold",
+    "name": "Callit",
+    "slug": "callit",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "callitscaffold",
+    "scheme": "callit",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "icon": "./assets/expo.icon"
+      "icon": "./assets/expo.icon",
+      "bundleIdentifier": "com.babiker.callit",
+      "usesAppleSignIn": true,
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
+      "package": "com.babiker.callit",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
@@ -34,7 +40,30 @@
             "imageWidth": 76
           }
         }
-      ]
+      ],
+      "expo-localization",
+      "expo-apple-authentication",
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Callit uses your location to find nearby places for the group to vote on."
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "color": "#6D28FF"
+        }
+      ],
+      [
+        "react-native-google-mobile-ads",
+        {
+          "androidAppId": "ca-app-pub-3940256099942544~3347511713",
+          "iosAppId": "ca-app-pub-3940256099942544~1458002511"
+        }
+      ],
+      "@sentry/react-native",
+      "react-native-bottom-tabs"
     ],
     "experiments": {
       "typedRoutes": true,
