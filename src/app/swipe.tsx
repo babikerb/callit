@@ -118,13 +118,18 @@ export default function SwipeScreen() {
 
   const done = index >= deck.length && deck.length > 0;
 
+  if (!started) {
+    return (
+      <View style={{ flex: 1, backgroundColor: colors.bg }}>
+        <ReadyIntro label={cat.label} onDone={handleStarted} />
+      </View>
+    );
+  }
+
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
       <SafeAreaView style={{ flex: 1 }} edges={['top', 'bottom']}>
-        {!started ? (
-          <ReadyIntro label={cat.label} onDone={handleStarted} />
-        ) : (
-          <>
+        <>
             <View style={styles.header}>
               <Pressable onPress={() => router.back()} hitSlop={12}>
                 <ChevronLeft size={28} color={colors.text} />
@@ -198,8 +203,7 @@ export default function SwipeScreen() {
                 </View>
               </>
             )}
-          </>
-        )}
+        </>
       </SafeAreaView>
     </View>
   );

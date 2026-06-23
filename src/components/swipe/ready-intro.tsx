@@ -1,9 +1,11 @@
 import * as Haptics from 'expo-haptics';
 import { useEffect, useState } from 'react';
-import { StyleSheet, View } from 'react-native';
-import Animated, { FadeOut, ZoomIn } from 'react-native-reanimated';
+import { Dimensions, StyleSheet, Text, View } from 'react-native';
+import Animated, { FadeIn } from 'react-native-reanimated';
 
-import { colors, palette, spacing, type } from '@/theme/tokens';
+import { palette, type } from '@/theme/tokens';
+
+const { width: W, height: H } = Dimensions.get('window');
 
 type ReadyIntroProps = {
   /** Category label, shown as a kicker ("DECIDING ON FOOD"). */
@@ -12,72 +14,78 @@ type ReadyIntroProps = {
 };
 
 /**
- * Kahoot-style game-start hype: "Are you ready?" pops in, then "Let's Callit!",
- * then hands off to the deck. Haptics punctuate each beat.
+ * Two clean Kahoot-style game-start screens that fade between each other:
+ * "Are you ready?" then "Let's Callit!". Static shapes, no bouncing — kept
+ * calm and readable.
  */
 export function ReadyIntro({ label, onDone }: ReadyIntroProps) {
   const [phase, setPhase] = useState(0);
 
   useEffect(() => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     const t1 = setTimeout(() => {
       setPhase(1);
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    }, 1300);
-    const t2 = setTimeout(onDone, 2600);
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    }, 1600);
+    const t2 = setTimeout(onDone, 3200);
     return () => {
       clearTimeout(t1);
       clearTimeout(t2);
     };
   }, [onDone]);
 
-  return (
-    <View style={styles.overlay}>
-      <Animated.Text entering={ZoomIn.springify().damping(16)} style={styles.kicker}>
-        DECIDING ON {label.toUpperCase()}
-      </Animated.Text>
+  const ready = phase === 0;
 
-      {phase === 0 ? (
-        <Animated.Text
-          key="ready"
-          entering={ZoomIn.springify().damping(12)}
-          exiting={FadeOut.duration(140)}
-          style={styles.ready}>
-          Are you ready?
-        </Animated.Text>
-      ) : (
-        <Animated.Text key="go" entering={ZoomIn.springify().damping(8)} style={styles.go}>
-          Let&apos;s Callit!
-        </Animated.Text>
-      )}
-    </View>
+  return (
+    <Animated.View
+      key={phase}
+      entering={FadeIn.duration(280)}
+      style={[styles.stage, { backgroundColor: ready ? palette.purple : palette.pink }]}>
+      {/* Static decorative shapes */}
+      <View style={[styles.shape, styles.circle, { top: H * 0.13, right: W * 0.16 }]} />
+      <View style={[styles.shape, styles.square, { bottom: H * 0.15, left: W * 0.16 }]} />
+      <View style={[styles.shape, styles.triangle, { top: H * 0.16, left: W * 0.16 }]} />
+      <View style={[styles.shape, styles.ring, { bottom: H * 0.13, right: W * 0.14 }]} />
+
+      <Text style={styles.kicker}>DECIDING ON {label.toUpperCase()}</Text>
+      <Text style={styles.title}>{ready ? 'Are you ready?' : "Let's Callit!"}</Text>
+    </Animated.View>
   );
 }
 
 const styles = StyleSheet.create({
-  overlay: {
+  stage: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: spacing.lg,
-    padding: spacing.xl,
+    gap: 18,
+    padding: 32,
+  },
+  shape: { position: 'absolute' },
+  circle: { width: 56, height: 56, borderRadius: 28, backgroundColor: palette.teal },
+  square: { width: 50, height: 50, borderRadius: 12, backgroundColor: palette.orange, transform: [{ rotate: '12deg' }] },
+  ring: { width: 56, height: 56, borderRadius: 28, borderWidth: 8, borderColor: 'rgba(255,255,255,0.3)' },
+  triangle: {
+    width: 0,
+    height: 0,
+    borderLeftWidth: 30,
+    borderRightWidth: 30,
+    borderBottomWidth: 52,
+    borderLeftColor: 'transparent',
+    borderRightColor: 'transparent',
+    borderBottomColor: 'rgba(255,255,255,0.3)',
   },
   kicker: {
     ...type.label,
-    color: colors.textMuted,
+    color: 'rgba(255,255,255,0.85)',
     letterSpacing: 2,
   },
-  ready: {
-    ...type.display,
-    color: colors.text,
-    textAlign: 'center',
-  },
-  go: {
+  title: {
     fontFamily: type.display.fontFamily,
     fontWeight: '900',
-    fontSize: 52,
+    fontSize: 50,
     letterSpacing: -1,
-    color: palette.pink,
+    color: '#FFFFFF',
     textAlign: 'center',
   },
 });
