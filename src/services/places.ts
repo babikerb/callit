@@ -10,6 +10,11 @@ export type Place = {
   latitude: number;
   longitude: number;
   category: string;
+  /** Free OSM tags, when present. */
+  cuisine?: string;
+  website?: string;
+  phone?: string;
+  openingHours?: string;
 };
 
 const OVERPASS_URL = 'https://overpass-api.de/api/interpreter';
@@ -57,8 +62,22 @@ export async function fetchNearbyPlaces(
       latitude: e.lat,
       longitude: e.lon,
       category,
+      cuisine: e.tags.cuisine,
+      website: e.tags.website ?? e.tags['contact:website'],
+      phone: e.tags.phone ?? e.tags['contact:phone'],
+      openingHours: e.tags.opening_hours,
     }))
     .slice(0, 50);
+}
+
+/** Prettify an OSM cuisine tag, e.g. "coffee_shop;tea" -> "Coffee Shop". */
+export function formatCuisine(cuisine?: string): string | undefined {
+  if (!cuisine) return undefined;
+  return cuisine
+    .split(';')[0]
+    .split('_')
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(' ');
 }
 
 /** Haversine distance in meters between two coords. */

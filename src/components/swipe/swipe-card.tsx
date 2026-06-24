@@ -1,7 +1,9 @@
 import { Image } from 'expo-image';
+import { Clock } from 'lucide-react-native';
 import { StyleSheet, Text, View } from 'react-native';
 
-import { formatDistance, type Place } from '@/services/places';
+import { todaysHours } from '@/services/hours';
+import { formatCuisine, formatDistance, type Place } from '@/services/places';
 import { colors, radius, spacing, type } from '@/theme/tokens';
 
 type SwipeCardProps = {
@@ -9,15 +11,21 @@ type SwipeCardProps = {
 };
 
 /** Keyless OpenStreetMap static map centered on the place, with a marker. */
-function staticMapUrl(lat: number, lon: number) {
-  return `https://staticmap.openstreetmap.de/staticmap.php?center=${lat},${lon}&zoom=16&size=600x500&maptype=mapnik&markers=${lat},${lon},red-pushpin`;
+export function staticMapUrl(lat: number, lon: number, size = '600x500') {
+  return `https://staticmap.openstreetmap.de/staticmap.php?center=${lat},${lon}&zoom=16&size=${size}&maptype=mapnik&markers=${lat},${lon},red-pushpin`;
 }
 
 /**
- * A single place card: a real static map of the spot up top, name + distance
- * in the footer.
+ * A place card: a real static map up top; name, distance, cuisine, and today's
+ * hours below. Tap (handled by the deck) opens the full detail view.
  */
 export function SwipeCard({ place }: SwipeCardProps) {
+  const cuisine = formatCuisine(place.cuisine);
+  const subtitle = [place.distance != null ? `${formatDistance(place.distance)} away` : null, cuisine]
+    .filter(Boolean)
+    .join('  ·  ');
+  const today = todaysHours(place.openingHours);
+
   return (
     <View style={styles.card}>
       <Image
@@ -30,17 +38,18 @@ export function SwipeCard({ place }: SwipeCardProps) {
         <Text style={[type.title, { color: colors.text }]} numberOfLines={1}>
           {place.name}
         </Text>
-        {place.distance != null ? (
-          <Text style={[type.body, { color: colors.textMuted }]}>{formatDistance(place.distance)} away</Text>
+        {subtitle ? <Text style={[type.body, { color: colors.textMuted }]}>{subtitle}</Text> : null}
+
+        {today ? (
+          <View style={styles.hoursRow}>
+            <Clock size={15} color={colors.textMuted} strokeWidth={2.5} />
+            <Text style={[type.label, { color: colors.textMuted, flex: 1 }]} numberOfLines={1}>
+              {today === 'Closed' ? 'Closed today' : today}
+            </Text>
+          </View>
         ) : null}
-        {/* Placeholders — to be filled later from free OSM tags only (no paid data). */}
-        <View style={styles.pills}>
-          {['Menu', 'Reviews', 'Photos', 'Hours'].map((label) => (
-            <View key={label} style={styles.pill}>
-              <Text style={[type.label, { color: colors.textMuted }]}>{label}</Text>
-            </View>
-          ))}
-        </View>
+
+        <Text style={[type.label, { color: colors.textMuted, opacity: 0.7 }]}>Tap for details</Text>
       </View>
     </View>
   );
@@ -63,19 +72,10 @@ const styles = StyleSheet.create({
     padding: spacing.lg,
     gap: spacing.sm,
   },
-  pills: {
+  hoursRow: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
+    alignItems: 'center',
     gap: spacing.sm,
-    marginTop: spacing.xs,
-  },
-  pill: {
-    paddingVertical: spacing.xs,
-    paddingHorizontal: spacing.md,
-    borderRadius: radius.pill,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
   },
 });
 

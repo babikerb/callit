@@ -15,11 +15,14 @@ import Animated, {
 } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { PlaceDetail } from '@/components/swipe/place-detail';
 import { ReadyIntro } from '@/components/swipe/ready-intro';
 import { SwipeCard } from '@/components/swipe/swipe-card';
 import { CATEGORIES, CATEGORY_BY_KEY } from '@/constants/categories';
 import { useNearbyPlaces } from '@/hooks/use-nearby-places';
-import { distanceMeters, type Place } from '@/services/places';
+import { distanceMeters, formatDistance, type Place } from '@/services/places';
+
+type LikedPlace = Place & { distance?: number };
 import { colors, palette, radius, spacing, type } from '@/theme/tokens';
 
 const { width: W } = Dimensions.get('window');
@@ -35,7 +38,8 @@ export default function SwipeScreen() {
   const [started, setStarted] = useState(false);
   const [coords, setCoords] = useState<Coords>(null);
   const [index, setIndex] = useState(0);
-  const [liked, setLiked] = useState<Place[]>([]);
+  const [liked, setLiked] = useState<LikedPlace[]>([]);
+  const [detail, setDetail] = useState<LikedPlace | null>(null);
 
   const { data: places = [], isLoading } = useNearbyPlaces(cat.key, coords);
 
@@ -103,6 +107,14 @@ export default function SwipeScreen() {
       }
     });
 
+  const topPlace = deck[index];
+  const tap = Gesture.Tap()
+    .maxDistance(10)
+    .onEnd((_e, success) => {
+      if (success && topPlace) runOnJS(setDetail)(topPlace);
+    });
+  const cardGesture = Gesture.Race(pan, tap);
+
   const topStyle = useAnimatedStyle(() => ({
     transform: [
       { translateX: x.value },
@@ -144,7 +156,9 @@ export default function SwipeScreen() {
                 <ChevronLeft size={28} color={colors.text} />
               </Pressable>
               <Text style={[type.heading, { color: colors.text }]}>{cat.label}</Text>
-              <Text style={[type.label, { color: colors.textMuted, width: 28, textAlign: 'right' }]}>
+              <Text
+                numberOfLines={1}
+                style={[type.label, { color: colors.textMuted, minWidth: 52, textAlign: 'right' }]}>
                 {deck.length ? `${Math.min(index + 1, deck.length)}/${deck.length}` : ''}
               </Text>
             </View>
@@ -163,7 +177,14 @@ export default function SwipeScreen() {
                 </Text>
               </View>
             ) : done ? (
-              <Results liked={liked} category={cat.label} />
+              <Results
+                liked={liked}
+                category={cat.label}
+                onRestart={() => {
+                  setIndex(0);
+                  setLiked([]);
+                }}
+              />
             ) : (
               <>
                 <View style={styles.deck}>
@@ -187,7 +208,7 @@ export default function SwipeScreen() {
                         );
                       }
                       return (
-                        <GestureDetector key={place.id} gesture={pan}>
+                        <GestureDetector key={place.id} gesture={cardGesture}>
                           <Animated.View style={[styles.cardWrap, topStyle]}>
                             <Animated.View style={[styles.badge, styles.badgeLeft, { borderColor: palette.teal }, yesBadge]}>
                               <Text style={[type.heading, { color: palette.teal }]}>YES</Text>
@@ -214,6 +235,8 @@ export default function SwipeScreen() {
             )}
         </>
       </SafeAreaView>
+
+      {detail ? <PlaceDetail place={detail} onClose={() => setDetail(null)} /> : null}
     </View>
   );
 }
@@ -245,28 +268,46 @@ function ActionButton({
   );
 }
 
-function Results({ liked, category }: { liked: Place[]; category: string }) {
+function Results({
+  liked,
+  category,
+  onRestart,
+}: {
+  liked: LikedPlace[];
+  category: string;
+  onRestart: () => void;
+}) {
   return (
     <View style={{ flex: 1, padding: spacing.lg }}>
       <Text style={[type.display, { color: colors.text }]}>Your picks</Text>
       <Text style={[type.body, { color: colors.textMuted, marginBottom: spacing.lg }]}>
         {liked.length} {category.toLowerCase()} {liked.length === 1 ? 'spot' : 'spots'} you liked.
       </Text>
+
       <ScrollView showsVerticalScrollIndicator={false} style={{ flex: 1 }}>
         {liked.map((p) => (
           <View key={p.id} style={styles.likedRow}>
-            <Text style={[type.body, { color: colors.text }]} numberOfLines={1}>
+            <Text style={[type.body, { color: colors.text, flex: 1 }]} numberOfLines={1}>
               {p.name}
             </Text>
+            {p.distance != null ? (
+              <Text style={[type.label, { color: colors.textMuted }]}>{formatDistance(p.distance)}</Text>
+            ) : null}
           </View>
         ))}
         {!liked.length ? (
           <Text style={[type.body, { color: colors.textMuted }]}>You passed on everything. Tough crowd.</Text>
         ) : null}
       </ScrollView>
-      <Pressable onPress={() => router.back()} style={styles.doneButton}>
-        <Text style={[type.heading, { color: colors.text }]}>Done</Text>
-      </Pressable>
+
+      <View style={styles.resultButtons}>
+        <Pressable onPress={onRestart} style={[styles.resultButton, styles.restartButton]}>
+          <Text style={[type.heading, { color: colors.text }]}>Swipe again</Text>
+        </Pressable>
+        <Pressable onPress={() => router.back()} style={[styles.resultButton, { backgroundColor: palette.pink }]}>
+          <Text style={[type.heading, { color: colors.text }]}>Done</Text>
+        </Pressable>
+      </View>
     </View>
   );
 }
@@ -304,15 +345,27 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.lg,
   },
   likedRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
     paddingVertical: spacing.md,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
   },
-  doneButton: {
-    backgroundColor: palette.pink,
+  resultButtons: {
+    flexDirection: 'row',
+    gap: spacing.md,
+    marginTop: spacing.md,
+  },
+  resultButton: {
+    flex: 1,
     borderRadius: radius.pill,
     paddingVertical: 16,
     alignItems: 'center',
-    marginTop: spacing.md,
+  },
+  restartButton: {
+    backgroundColor: colors.surfaceStrong,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
 });
