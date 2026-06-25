@@ -1,9 +1,11 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { DarkTheme, Stack, ThemeProvider } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import { useEffect } from 'react';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { AnimatedSplashOverlay } from '@/components/animated-icon';
+import { initAnalytics } from '@/services/firebase';
 import { colors } from '@/theme/tokens';
 
 const queryClient = new QueryClient();
@@ -14,6 +16,10 @@ const CallitDark = {
 };
 
 export default function RootLayout() {
+  useEffect(() => {
+    initAnalytics();
+  }, []);
+
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <QueryClientProvider client={queryClient}>
