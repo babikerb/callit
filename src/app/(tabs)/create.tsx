@@ -6,6 +6,8 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Screen } from '@/components/ui/screen';
 import { CATEGORIES } from '@/constants/categories';
+import { createCall } from '@/services/calls';
+import { getProfile } from '@/services/identity';
 import { colors, palette, radius, spacing, type } from '@/theme/tokens';
 
 const FILTERS = [
@@ -17,6 +19,22 @@ const FILTERS = [
 export default function CreateScreen() {
   const params = useLocalSearchParams<{ category?: string }>();
   const [category, setCategory] = useState<string>(params.category ?? 'food');
+  const [busy, setBusy] = useState(false);
+
+  const onCreate = async () => {
+    setBusy(true);
+    try {
+      const profile = await getProfile();
+      if (!profile) {
+        router.push({ pathname: '/setup', params: { redirect: 'create', category } });
+        return;
+      }
+      const { callId } = await createCall(category, profile);
+      router.push({ pathname: '/lobby', params: { callId, host: '1' } });
+    } finally {
+      setBusy(false);
+    }
+  };
 
   return (
     <Screen section="create" headline="Start a Call." subtitle="Confirm the category and filters, then share.">
@@ -64,9 +82,11 @@ export default function CreateScreen() {
       </Card>
 
       <Button
-        label="Create Call"
+        label={busy ? 'Creating…' : 'Create Call'}
         color={palette.orange}
-        onPress={() => router.push({ pathname: '/swipe', params: { category } })}
+        disabled={busy}
+        style={{ opacity: busy ? 0.6 : 1 }}
+        onPress={onCreate}
       />
     </Screen>
   );

@@ -27,6 +27,8 @@ import {
 import { randomUUID } from 'expo-crypto';
 
 import { db } from '@/services/firebase';
+import type { Profile } from '@/services/identity';
+import type { Place } from '@/services/places';
 
 const DEVICE_KEY = 'callit.deviceId';
 let cachedDeviceId: string | null = null;
@@ -58,13 +60,13 @@ export type Call = {
   category: string;
   status: CallStatus;
   hostId: string;
-  placeIds?: string[];
+  places?: Place[];
 };
 
-export type Participant = { id: string; done: boolean };
+export type Participant = { id: string; name: string; avatarId: string; done: boolean };
 
 /** Create a Call and join it as host. */
-export async function createCall(category: string): Promise<{ callId: string; code: string }> {
+export async function createCall(category: string, profile: Profile): Promise<{ callId: string; code: string }> {
   const hostId = await getDeviceId();
   const code = genCode();
   const ref = await addDoc(collection(db, 'calls'), {
@@ -75,6 +77,8 @@ export async function createCall(category: string): Promise<{ callId: string; co
     createdAt: serverTimestamp(),
   });
   await setDoc(doc(db, 'calls', ref.id, 'participants', hostId), {
+    name: profile.name,
+    avatarId: profile.avatarId,
     joinedAt: serverTimestamp(),
     done: false,
   });
@@ -82,12 +86,14 @@ export async function createCall(category: string): Promise<{ callId: string; co
 }
 
 /** Join an existing Call by its share code. */
-export async function joinCall(code: string): Promise<string> {
+export async function joinCall(code: string, profile: Profile): Promise<string> {
   const snap = await getDocs(query(collection(db, 'calls'), where('code', '==', code.toUpperCase().trim())));
   if (snap.empty) throw new Error('Call not found');
   const callId = snap.docs[0].id;
   const me = await getDeviceId();
   await setDoc(doc(db, 'calls', callId, 'participants', me), {
+    name: profile.name,
+    avatarId: profile.avatarId,
     joinedAt: serverTimestamp(),
     done: false,
   });
@@ -103,13 +109,23 @@ export function subscribeCall(callId: string, cb: (call: Call | null) => void) {
 
 export function subscribeParticipants(callId: string, cb: (people: Participant[]) => void) {
   return onSnapshot(collection(db, 'calls', callId, 'participants'), (snap) => {
-    cb(snap.docs.map((d) => ({ id: d.id, done: !!d.data()?.done })));
+    cb(
+      snap.docs.map((d) => {
+        const data = d.data() ?? {};
+        return {
+          id: d.id,
+          name: (data.name as string) ?? 'Player',
+          avatarId: (data.avatarId as string) ?? 'cat',
+          done: !!data.done,
+        };
+      }),
+    );
   });
 }
 
 /** Host locks in the shared deck (so everyone swipes the same places) and starts swiping. */
-export async function startSwiping(callId: string, placeIds: string[]) {
-  await updateDoc(doc(db, 'calls', callId), { placeIds, status: 'swiping' });
+export async function startSwiping(callId: string, places: Place[]) {
+  await updateDoc(doc(db, 'calls', callId), { places, status: 'swiping' });
 }
 
 export async function castVote(callId: string, placeId: string, vote: 'yes' | 'no') {

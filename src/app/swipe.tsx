@@ -18,11 +18,17 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { PlaceDetail } from '@/components/swipe/place-detail';
 import { ReadyIntro } from '@/components/swipe/ready-intro';
 import { SwipeCard } from '@/components/swipe/swipe-card';
-import { CATEGORIES, CATEGORY_BY_KEY } from '@/constants/categories';
-import { useNearbyPlaces } from '@/hooks/use-nearby-places';
+import { CATEGORY_BY_KEY } from '@/constants/categories';
+import {
+  castVote,
+  markDone,
+  subscribeCall,
+  subscribeParticipants,
+  subscribeTally,
+  type Call,
+  type Participant,
+} from '@/services/calls';
 import { distanceMeters, formatDistance, type Place } from '@/services/places';
-
-type LikedPlace = Place & { distance?: number };
 import { colors, palette, radius, spacing, type } from '@/theme/tokens';
 
 const { width: W } = Dimensions.get('window');
@@ -30,23 +36,26 @@ const SWIPE_X = W * 0.26;
 
 type Coords = { latitude: number; longitude: number } | null;
 type Decision = 'no' | 'yes';
+type DeckPlace = Place & { distance?: number };
 
 export default function SwipeScreen() {
-  const { category } = useLocalSearchParams<{ category?: string }>();
-  const cat = CATEGORY_BY_KEY[category ?? 'food'] ?? CATEGORIES[0];
+  const { callId } = useLocalSearchParams<{ callId: string }>();
 
-  const [started, setStarted] = useState(false);
+  const [call, setCall] = useState<Call | null>(null);
   const [coords, setCoords] = useState<Coords>(null);
+  const [started, setStarted] = useState(false);
   const [index, setIndex] = useState(0);
-  const [liked, setLiked] = useState<LikedPlace[]>([]);
-  const [detail, setDetail] = useState<LikedPlace | null>(null);
-
-  const { data: places = [], isLoading } = useNearbyPlaces(cat.key, coords);
+  const [detail, setDetail] = useState<DeckPlace | null>(null);
 
   const x = useSharedValue(0);
   const y = useSharedValue(0);
 
   const handleStarted = useCallback(() => setStarted(true), []);
+
+  useEffect(() => {
+    if (!callId) return;
+    return subscribeCall(callId, setCall);
+  }, [callId]);
 
   useEffect(() => {
     let cancelled = false;
@@ -61,24 +70,25 @@ export default function SwipeScreen() {
     };
   }, []);
 
-  const deck = useMemo(() => {
-    const withDistance = places.map((p) => ({ ...p, distance: coords ? distanceMeters(coords, p) : undefined }));
-    const sorted = withDistance.sort((a, b) => (a.distance ?? 1e9) - (b.distance ?? 1e9));
-    // Collapse same-named spots (chains) to just the closest one.
-    const seen = new Set<string>();
-    const unique = sorted.filter((p) => {
-      const key = p.name.trim().toLowerCase();
-      if (seen.has(key)) return false;
-      seen.add(key);
-      return true;
-    });
-    return unique.slice(0, 30);
-  }, [places, coords]);
+  const cat = call ? CATEGORY_BY_KEY[call.category] : undefined;
+  const label = cat?.label ?? call?.category ?? '';
+
+  // Shared deck (host-ordered); each device just adds its own distance.
+  const deck: DeckPlace[] = useMemo(() => {
+    const places = call?.places ?? [];
+    return places.map((p) => ({ ...p, distance: coords ? distanceMeters(coords, p) : undefined }));
+  }, [call?.places, coords]);
+
+  const done = deck.length > 0 && index >= deck.length;
+
+  useEffect(() => {
+    if (done && callId) markDone(callId);
+  }, [done, callId]);
 
   const recordAndAdvance = (dir: Decision) => {
     const place = deck[index];
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    if (place && dir === 'yes') setLiked((l) => [...l, place]);
+    if (place && callId) castVote(callId, place.id, dir);
     setIndex((i) => i + 1);
     x.value = 0;
     y.value = 0;
@@ -97,11 +107,9 @@ export default function SwipeScreen() {
       y.value = e.translationY;
     })
     .onEnd((e) => {
-      if (e.translationX > SWIPE_X) {
-        runOnJS(fling)('yes');
-      } else if (e.translationX < -SWIPE_X) {
-        runOnJS(fling)('no');
-      } else {
+      if (e.translationX > SWIPE_X) runOnJS(fling)('yes');
+      else if (e.translationX < -SWIPE_X) runOnJS(fling)('no');
+      else {
         x.value = withSpring(0);
         y.value = withSpring(0);
       }
@@ -137,12 +145,10 @@ export default function SwipeScreen() {
   const yesBadge = useAnimatedStyle(() => ({ opacity: interpolate(x.value, [0, SWIPE_X], [0, 1], 'clamp') }));
   const noBadge = useAnimatedStyle(() => ({ opacity: interpolate(x.value, [-SWIPE_X, 0], [1, 0], 'clamp') }));
 
-  const done = index >= deck.length && deck.length > 0;
-
   if (!started) {
     return (
       <View style={{ flex: 1, backgroundColor: colors.bg }}>
-        <ReadyIntro label={cat.label} onDone={handleStarted} />
+        {call ? <ReadyIntro label={label} onDone={handleStarted} /> : <Loading />}
       </View>
     );
   }
@@ -150,93 +156,85 @@ export default function SwipeScreen() {
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
       <SafeAreaView style={{ flex: 1 }} edges={['top', 'bottom']}>
-        <>
-            <View style={styles.header}>
-              <Pressable onPress={() => router.back()} hitSlop={12}>
-                <ChevronLeft size={28} color={colors.text} />
-              </Pressable>
-              <Text style={[type.heading, { color: colors.text }]}>{cat.label}</Text>
-              <Text
-                numberOfLines={1}
-                style={[type.label, { color: colors.textMuted, minWidth: 52, textAlign: 'right' }]}>
-                {deck.length ? `${Math.min(index + 1, deck.length)}/${deck.length}` : ''}
-              </Text>
+        <View style={styles.header}>
+          <View style={styles.headerSide}>
+            <Pressable onPress={() => router.replace('/')} hitSlop={12}>
+              <ChevronLeft size={28} color={colors.text} />
+            </Pressable>
+          </View>
+          <Text style={[type.heading, { color: colors.text }]}>{label}</Text>
+          <View style={[styles.headerSide, { alignItems: 'flex-end' }]}>
+            <Text numberOfLines={1} style={[type.label, { color: colors.textMuted }]}>
+              {deck.length && !done ? `${Math.min(index + 1, deck.length)}/${deck.length}` : ''}
+            </Text>
+          </View>
+        </View>
+
+        {!deck.length ? (
+          <View style={styles.center}>
+            <ActivityIndicator color={colors.textMuted} />
+          </View>
+        ) : done ? (
+          <GroupResults callId={callId} deck={deck} />
+        ) : (
+          <>
+            <View style={styles.deck}>
+              {deck
+                .slice(index, index + 3)
+                .map((place, depth) => ({ place, depth }))
+                .reverse()
+                .map(({ place, depth }) => {
+                  if (depth === 2) {
+                    return (
+                      <Animated.View key={place.id} style={[styles.cardWrap, styles.thirdCard]}>
+                        <SwipeCard place={place} />
+                      </Animated.View>
+                    );
+                  }
+                  if (depth === 1) {
+                    return (
+                      <Animated.View key={place.id} style={[styles.cardWrap, secondStyle]}>
+                        <SwipeCard place={place} />
+                      </Animated.View>
+                    );
+                  }
+                  return (
+                    <GestureDetector key={place.id} gesture={cardGesture}>
+                      <Animated.View style={[styles.cardWrap, topStyle]}>
+                        <Animated.View style={[styles.badge, styles.badgeLeft, { borderColor: palette.teal }, yesBadge]}>
+                          <Text style={[type.heading, { color: palette.teal }]}>YES</Text>
+                        </Animated.View>
+                        <Animated.View style={[styles.badge, styles.badgeRight, { borderColor: palette.pink }, noBadge]}>
+                          <Text style={[type.heading, { color: palette.pink }]}>NO</Text>
+                        </Animated.View>
+                        <SwipeCard place={place} />
+                      </Animated.View>
+                    </GestureDetector>
+                  );
+                })}
             </View>
 
-            {isLoading && !deck.length ? (
-              <View style={styles.center}>
-                <ActivityIndicator color={colors.textMuted} />
-                <Text style={[type.body, { color: colors.textMuted, marginTop: spacing.md }]}>
-                  Finding {cat.label.toLowerCase()} near you…
-                </Text>
-              </View>
-            ) : !deck.length ? (
-              <View style={styles.center}>
-                <Text style={[type.body, { color: colors.textMuted, textAlign: 'center' }]}>
-                  {coords ? 'No places found nearby. Try another category.' : 'Turn on location to find places.'}
-                </Text>
-              </View>
-            ) : done ? (
-              <Results
-                liked={liked}
-                category={cat.label}
-                onRestart={() => {
-                  setIndex(0);
-                  setLiked([]);
-                }}
-              />
-            ) : (
-              <>
-                <View style={styles.deck}>
-                  {deck
-                    .slice(index, index + 3)
-                    .map((place, depth) => ({ place, depth }))
-                    .reverse()
-                    .map(({ place, depth }) => {
-                      if (depth === 2) {
-                        return (
-                          <Animated.View key={place.id} style={[styles.cardWrap, styles.thirdCard]}>
-                            <SwipeCard place={place} />
-                          </Animated.View>
-                        );
-                      }
-                      if (depth === 1) {
-                        return (
-                          <Animated.View key={place.id} style={[styles.cardWrap, secondStyle]}>
-                            <SwipeCard place={place} />
-                          </Animated.View>
-                        );
-                      }
-                      return (
-                        <GestureDetector key={place.id} gesture={cardGesture}>
-                          <Animated.View style={[styles.cardWrap, topStyle]}>
-                            <Animated.View style={[styles.badge, styles.badgeLeft, { borderColor: palette.teal }, yesBadge]}>
-                              <Text style={[type.heading, { color: palette.teal }]}>YES</Text>
-                            </Animated.View>
-                            <Animated.View style={[styles.badge, styles.badgeRight, { borderColor: palette.pink }, noBadge]}>
-                              <Text style={[type.heading, { color: palette.pink }]}>NO</Text>
-                            </Animated.View>
-                            <SwipeCard place={place} />
-                          </Animated.View>
-                        </GestureDetector>
-                      );
-                    })}
-                </View>
-
-                <View style={styles.actions}>
-                  <ActionButton color={palette.pink} onPress={() => fling('no')}>
-                    <X size={30} color={palette.pink} strokeWidth={3} />
-                  </ActionButton>
-                  <ActionButton color={palette.teal} onPress={() => fling('yes')}>
-                    <Check size={30} color={palette.teal} strokeWidth={3} />
-                  </ActionButton>
-                </View>
-              </>
-            )}
-        </>
+            <View style={styles.actions}>
+              <ActionButton color={palette.pink} onPress={() => fling('no')}>
+                <X size={30} color={palette.pink} strokeWidth={3} />
+              </ActionButton>
+              <ActionButton color={palette.teal} onPress={() => fling('yes')}>
+                <Check size={30} color={palette.teal} strokeWidth={3} />
+              </ActionButton>
+            </View>
+          </>
+        )}
       </SafeAreaView>
 
       {detail ? <PlaceDetail place={detail} onClose={() => setDetail(null)} /> : null}
+    </View>
+  );
+}
+
+function Loading() {
+  return (
+    <View style={styles.center}>
+      <ActivityIndicator color={colors.textMuted} />
     </View>
   );
 }
@@ -268,46 +266,63 @@ function ActionButton({
   );
 }
 
-function Results({
-  liked,
-  category,
-  onRestart,
-}: {
-  liked: LikedPlace[];
-  category: string;
-  onRestart: () => void;
-}) {
+function GroupResults({ callId, deck }: { callId: string; deck: DeckPlace[] }) {
+  const [tally, setTally] = useState<Record<string, number>>({});
+  const [people, setPeople] = useState<Participant[]>([]);
+
+  useEffect(() => {
+    if (!callId) return;
+    const a = subscribeTally(callId, setTally);
+    const b = subscribeParticipants(callId, setPeople);
+    return () => {
+      a();
+      b();
+    };
+  }, [callId]);
+
+  const ranked = useMemo(
+    () => [...deck].map((p) => ({ place: p, yes: tally[p.id] ?? 0 })).sort((a, b) => b.yes - a.yes),
+    [deck, tally],
+  );
+  const doneCount = people.filter((p) => p.done).length;
+  const winner = ranked[0];
+
   return (
     <View style={{ flex: 1, padding: spacing.lg }}>
-      <Text style={[type.display, { color: colors.text }]}>Your picks</Text>
-      <Text style={[type.body, { color: colors.textMuted, marginBottom: spacing.lg }]}>
-        {liked.length} {category.toLowerCase()} {liked.length === 1 ? 'spot' : 'spots'} you liked.
+      <Text style={[type.display, { color: colors.text }]}>The call</Text>
+      <Text style={[type.body, { color: colors.textMuted, marginBottom: spacing.md }]}>
+        {doneCount}/{people.length} done · live results
       </Text>
 
-      <ScrollView showsVerticalScrollIndicator={false} style={{ flex: 1 }}>
-        {liked.map((p) => (
-          <View key={p.id} style={styles.likedRow}>
+      {winner && winner.yes > 0 ? (
+        <View style={styles.winnerCard}>
+          <Text style={[type.label, { color: palette.pink, textTransform: 'uppercase' }]}>Winning</Text>
+          <Text style={[type.title, { color: colors.text }]} numberOfLines={1}>
+            {winner.place.name}
+          </Text>
+          <Text style={[type.body, { color: colors.textMuted }]}>
+            {winner.yes} {winner.yes === 1 ? 'yes' : 'yeses'}
+            {winner.place.distance != null ? `  ·  ${formatDistance(winner.place.distance)}` : ''}
+          </Text>
+        </View>
+      ) : (
+        <Text style={[type.body, { color: colors.textMuted }]}>No yes votes yet.</Text>
+      )}
+
+      <ScrollView showsVerticalScrollIndicator={false} style={{ flex: 1, marginTop: spacing.md }}>
+        {ranked.slice(1).map(({ place, yes }) => (
+          <View key={place.id} style={styles.rankRow}>
             <Text style={[type.body, { color: colors.text, flex: 1 }]} numberOfLines={1}>
-              {p.name}
+              {place.name}
             </Text>
-            {p.distance != null ? (
-              <Text style={[type.label, { color: colors.textMuted }]}>{formatDistance(p.distance)}</Text>
-            ) : null}
+            <Text style={[type.label, { color: colors.textMuted }]}>{yes}</Text>
           </View>
         ))}
-        {!liked.length ? (
-          <Text style={[type.body, { color: colors.textMuted }]}>You passed on everything. Tough crowd.</Text>
-        ) : null}
       </ScrollView>
 
-      <View style={styles.resultButtons}>
-        <Pressable onPress={onRestart} style={[styles.resultButton, styles.restartButton]}>
-          <Text style={[type.heading, { color: colors.text }]}>Swipe again</Text>
-        </Pressable>
-        <Pressable onPress={() => router.back()} style={[styles.resultButton, { backgroundColor: palette.pink }]}>
-          <Text style={[type.heading, { color: colors.text }]}>Done</Text>
-        </Pressable>
-      </View>
+      <Pressable onPress={() => router.replace('/')} style={styles.doneButton}>
+        <Text style={[type.heading, { color: colors.text }]}>Done</Text>
+      </Pressable>
     </View>
   );
 }
@@ -316,10 +331,10 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
   },
+  headerSide: { flex: 1, justifyContent: 'center' },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: spacing.xl },
   deck: { flex: 1, margin: spacing.lg },
   cardWrap: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 },
@@ -344,7 +359,15 @@ const styles = StyleSheet.create({
     gap: spacing.xxl,
     paddingBottom: spacing.lg,
   },
-  likedRow: {
+  winnerCard: {
+    gap: spacing.xs,
+    padding: spacing.lg,
+    borderRadius: radius.lg,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: palette.pink,
+  },
+  rankRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.md,
@@ -352,20 +375,11 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
   },
-  resultButtons: {
-    flexDirection: 'row',
-    gap: spacing.md,
-    marginTop: spacing.md,
-  },
-  resultButton: {
-    flex: 1,
+  doneButton: {
+    backgroundColor: palette.pink,
     borderRadius: radius.pill,
     paddingVertical: 16,
     alignItems: 'center',
-  },
-  restartButton: {
-    backgroundColor: colors.surfaceStrong,
-    borderWidth: 1,
-    borderColor: colors.border,
+    marginTop: spacing.md,
   },
 });
