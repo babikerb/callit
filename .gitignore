@@ -41,3 +41,8 @@ example
 # generated native folders
 /ios
 /android
+
+# Firebase config (kept out of the repo; restored from a GitHub secret in CI)
+GoogleService-Info.plist
+google-services.json
+*.plist.b64

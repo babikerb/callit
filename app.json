@@ -9,14 +9,15 @@
     "userInterfaceStyle": "dark",
     "ios": {
       "icon": "./assets/images/icon.png",
-      "bundleIdentifier": "com.babiker.callit",
+      "bundleIdentifier": "com.bbabiker.callit",
+      "googleServicesFile": "./GoogleService-Info.plist",
       "usesAppleSignIn": true,
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
-      "package": "com.babiker.callit",
+      "package": "com.bbabiker.callit",
       "adaptiveIcon": {
         "backgroundColor": "#5626B9",
         "foregroundImage": "./assets/images/icon.png",
@@ -64,7 +65,17 @@
         }
       ],
       "@sentry/react-native",
-      "react-native-bottom-tabs"
+      "react-native-bottom-tabs",
+      "@react-native-firebase/app",
+      "@react-native-firebase/analytics",
+      [
+        "expo-build-properties",
+        {
+          "ios": {
+            "useFrameworks": "static"
+          }
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,
