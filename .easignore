@@ -1,0 +1,50 @@
+# EAS uses this instead of .gitignore when archiving the project for a build.
+# Mirrors .gitignore EXCEPT it does NOT ignore GoogleService-Info.plist, so the
+# plist (restored from a secret in CI) is included in the build context while
+# still being kept out of git.
+
+# dependencies
+node_modules/
+
+# Expo
+.expo/
+dist/
+web-build/
+expo-env.d.ts
+
+# Native
+.kotlin/
+*.orig.*
+*.jks
+*.p8
+*.p12
+*.mobileprovision
+
+# Metro
+.metro-health-check*
+
+# debug
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+
+# macOS
+.DS_Store
+
+# typescript
+*.tsbuildinfo
+
+example
+
+# generated native folders
+/ios
+/android
+
+# secrets / local env (do NOT ship)
+.env
+.env.local
+.env*.local
+google-services.json
+*.plist.b64
+
+# NOTE: GoogleService-Info.plist is intentionally NOT ignored here.
