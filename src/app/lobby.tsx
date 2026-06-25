@@ -92,7 +92,16 @@ export default function LobbyScreen() {
           })
           .sort((a, b) => distanceMeters(coords, a) - distanceMeters(coords, b))
           .slice(0, 25);
-        const places = (await refinePlaces(label, deduped)).slice(0, 20);
+        let city: string | undefined;
+        try {
+          const geo = await Location.reverseGeocodeAsync(coords);
+          city = geo[0]?.city ?? geo[0]?.subregion ?? undefined;
+        } catch {
+          // ignore geocode failure
+        }
+        const places = (
+          await refinePlaces(label, deduped, { maxPrice: filters?.maxPrice, city })
+        ).slice(0, 20);
         await setCallPlaces(callId, places);
       } catch {
         // leave the deck empty; the swipe screen shows a finding state

@@ -6,6 +6,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { AnimatedSplashOverlay } from '@/components/animated-icon';
 import { initAnalytics } from '@/services/firebase';
+import { useProfileStore } from '@/stores/profile';
 import { colors } from '@/theme/tokens';
 
 const queryClient = new QueryClient();
@@ -18,6 +19,7 @@ const CallitDark = {
 export default function RootLayout() {
   useEffect(() => {
     initAnalytics();
+    useProfileStore.getState().hydrate();
   }, []);
 
   return (

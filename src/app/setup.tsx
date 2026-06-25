@@ -5,7 +5,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { IdentityForm } from '@/components/identity-form';
 import { createCall } from '@/services/calls';
-import { blankProfile, getProfile, saveProfile, type Profile } from '@/services/identity';
+import { blankProfile, getProfile, type Profile } from '@/services/identity';
+import { useProfileStore } from '@/stores/profile';
 import { colors, spacing, type } from '@/theme/tokens';
 
 export default function SetupScreen() {
@@ -14,6 +15,7 @@ export default function SetupScreen() {
     category?: string;
     radius?: string;
     openNow?: string;
+    price?: string;
   }>();
   const [initial, setInitial] = useState<Profile | null>(null);
   const [busy, setBusy] = useState(false);
@@ -25,9 +27,13 @@ export default function SetupScreen() {
   const onSubmit = async (profile: Profile) => {
     setBusy(true);
     try {
-      await saveProfile(profile);
+      await useProfileStore.getState().save(profile);
       if (params.redirect === 'create' && params.category) {
-        const filters = { radiusMiles: Number(params.radius) || 2, openNow: params.openNow === '1' };
+        const filters = {
+          radiusMiles: Number(params.radius) || 2,
+          openNow: params.openNow === '1',
+          maxPrice: Number(params.price) || 0,
+        };
         const { callId } = await createCall(params.category, profile, filters);
         router.replace({ pathname: '/lobby', params: { callId, host: '1' } });
       } else if (params.redirect === 'join') {

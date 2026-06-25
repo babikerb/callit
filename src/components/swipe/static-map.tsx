@@ -1,6 +1,6 @@
 import { Image } from 'expo-image';
 import { MapPin } from 'lucide-react-native';
-import { useMemo, useState } from 'react';
+import { memo, useMemo, useState } from 'react';
 import { View, type ViewStyle } from 'react-native';
 
 import { colors, palette } from '@/theme/tokens';
@@ -26,7 +26,7 @@ function latToTileY(lat: number, z: number) {
  * Reliable static map from raw OpenStreetMap tiles (keyless), centered on the
  * coordinate with a pin. Renders just enough tiles to fill the measured area.
  */
-export function StaticMap({ latitude, longitude, zoom = 14, style }: StaticMapProps) {
+function StaticMapImpl({ latitude, longitude, zoom = 14, style }: StaticMapProps) {
   const [size, setSize] = useState({ w: 0, h: 0 });
 
   const tiles = useMemo(() => {
@@ -73,5 +73,7 @@ export function StaticMap({ latitude, longitude, zoom = 14, style }: StaticMapPr
     </View>
   );
 }
+
+export const StaticMap = memo(StaticMapImpl);
 
 export default StaticMap;

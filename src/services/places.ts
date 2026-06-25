@@ -19,28 +19,39 @@ export type Place = {
 
 const OVERPASS_URL = 'https://overpass-api.de/api/interpreter';
 
-/** OSM node filters per category. */
+/** OSM tag selectors per category (applied to both nodes and areas/ways). */
 const FILTERS: Record<string, string[]> = {
-  food: ['node["amenity"="restaurant"]', 'node["amenity"="fast_food"]'],
-  cafe: ['node["amenity"="cafe"]', 'node["cuisine"="bubble_tea"]', 'node["shop"="bubble_tea"]'],
-  dessert: ['node["amenity"="ice_cream"]', 'node["shop"="pastry"]', 'node["shop"="confectionery"]'],
+  food: ['["amenity"="restaurant"]', '["amenity"="fast_food"]'],
+  cafe: ['["amenity"="cafe"]', '["cuisine"="bubble_tea"]', '["shop"="bubble_tea"]'],
+  dessert: ['["amenity"="ice_cream"]', '["shop"="pastry"]', '["shop"="confectionery"]'],
+  // Activities = generic "stuff to do" beyond eating: parks/walks, murals,
+  // viewpoints, museums, galleries, attractions, plus the active stuff.
   activities: [
-    'node["leisure"="bowling_alley"]',
-    'node["amenity"="cinema"]',
-    'node["leisure"="amusement_arcade"]',
-    'node["leisure"="escape_game"]',
-    'node["leisure"="trampoline_park"]',
-    'node["leisure"="miniature_golf"]',
-    'node["tourism"="museum"]',
+    '["leisure"="park"]',
+    '["leisure"="garden"]',
+    '["tourism"="viewpoint"]',
+    '["tourism"="artwork"]',
+    '["tourism"="attraction"]',
+    '["tourism"="museum"]',
+    '["tourism"="gallery"]',
+    '["tourism"="zoo"]',
+    '["tourism"="theme_park"]',
+    '["leisure"="bowling_alley"]',
+    '["amenity"="cinema"]',
+    '["leisure"="amusement_arcade"]',
+    '["leisure"="escape_game"]',
+    '["leisure"="miniature_golf"]',
+    '["historic"="monument"]',
   ],
   // Fallback for any unknown category key.
-  anything: ['node["amenity"="restaurant"]', 'node["amenity"="cafe"]', 'node["amenity"="fast_food"]'],
+  anything: ['["amenity"="restaurant"]', '["amenity"="cafe"]', '["amenity"="fast_food"]'],
 };
 
 type OverpassElement = {
   id: number;
   lat?: number;
   lon?: number;
+  center?: { lat: number; lon: number };
   tags?: Record<string, string>;
 };
 
@@ -51,27 +62,46 @@ export async function fetchNearbyPlaces(
   radius = 2000,
 ): Promise<Place[]> {
   const filters = FILTERS[category] ?? FILTERS.anything;
-  const clauses = filters.map((f) => `${f}(around:${radius},${latitude},${longitude});`).join('');
-  const query = `[out:json][timeout:25];(${clauses});out body 50;`;
+  // Query nodes AND ways/areas (parks, museums, etc.) and get their center.
+  const clauses = filters
+    .map((f) => `node${f}(around:${radius},${latitude},${longitude});way${f}(around:${radius},${latitude},${longitude});`)
+    .join('');
+  const query = `[out:json][timeout:25];(${clauses});out center 60;`;
 
   const res = await fetch(OVERPASS_URL, { method: 'POST', body: query });
   if (!res.ok) throw new Error(`Overpass error ${res.status}`);
   const json = (await res.json()) as { elements?: OverpassElement[] };
 
   return (json.elements ?? [])
-    .filter((e): e is Required<OverpassElement> => !!(e.tags?.name && e.lat != null && e.lon != null))
-    .map((e) => ({
+    .map((e) => ({ e, lat: e.lat ?? e.center?.lat, lon: e.lon ?? e.center?.lon }))
+    .filter((x): x is { e: OverpassElement; lat: number; lon: number } =>
+      x.lat != null && x.lon != null && !!x.e.tags?.name,
+    )
+    .map(({ e, lat, lon }) => ({
       id: String(e.id),
-      name: e.tags.name,
-      latitude: e.lat,
-      longitude: e.lon,
+      name: titleCasePlace(e.tags!.name),
+      latitude: lat,
+      longitude: lon,
       category,
-      cuisine: e.tags.cuisine,
-      website: e.tags.website ?? e.tags['contact:website'],
-      phone: e.tags.phone ?? e.tags['contact:phone'],
-      openingHours: e.tags.opening_hours,
+      cuisine: e.tags!.cuisine,
+      website: e.tags!.website ?? e.tags!['contact:website'],
+      phone: e.tags!.phone ?? e.tags!['contact:phone'],
+      openingHours: e.tags!.opening_hours,
     }))
-    .slice(0, 50);
+    .slice(0, 60);
+}
+
+/** Title-case a place name while preserving acronyms (IHOP) and internal caps (McDonald's). */
+export function titleCasePlace(name: string): string {
+  return name
+    .split(' ')
+    .map((w) => {
+      if (w.length <= 1) return w.toUpperCase();
+      if (w === w.toUpperCase()) return w; // acronym: IHOP, KFC
+      if (/[a-z]/.test(w) && /[A-Z]/.test(w.slice(1))) return w; // McDonald's, BurgerFi
+      return w.charAt(0).toUpperCase() + w.slice(1).toLowerCase();
+    })
+    .join(' ');
 }
 
 /** Prettify an OSM cuisine tag, e.g. "coffee_shop;tea" -> "Coffee Shop". */

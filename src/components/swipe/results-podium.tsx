@@ -1,4 +1,5 @@
 import * as Haptics from 'expo-haptics';
+import { Crown } from 'lucide-react-native';
 import { useEffect, useMemo, useState } from 'react';
 import { Dimensions, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
@@ -49,10 +50,10 @@ export function ResultsPodium({ ranked, onDone }: ResultsPodiumProps) {
       Haptics.impactAsync(
         i === sequence.length ? Haptics.ImpactFeedbackStyle.Heavy : Haptics.ImpactFeedbackStyle.Light,
       );
-      if (i < sequence.length) timers.push(setTimeout(tick, 1100));
-      else timers.push(setTimeout(() => setShowPodium(true), 1700));
+      if (i < sequence.length) timers.push(setTimeout(tick, 1700));
+      else timers.push(setTimeout(() => setShowPodium(true), 2600));
     };
-    timers.push(setTimeout(tick, 700));
+    timers.push(setTimeout(tick, 1000));
     return () => timers.forEach(clearTimeout);
   }, [ranked.length, sequence.length]);
 
@@ -85,7 +86,7 @@ export function ResultsPodium({ ranked, onDone }: ResultsPodiumProps) {
   return (
     <View style={{ flex: 1 }}>
       <View style={{ paddingHorizontal: spacing.lg }}>
-        <Text style={[type.display, { color: colors.text, textAlign: 'center' }]}>The call</Text>
+        <Text style={[type.display, { color: colors.text, textAlign: 'center' }]}>The Call</Text>
         <Text style={[type.body, { color: colors.textMuted, textAlign: 'center' }]}>
           {hasVotes ? 'Your group decided.' : 'No yes votes. Run it back.'}
         </Text>
@@ -96,15 +97,21 @@ export function ResultsPodium({ ranked, onDone }: ResultsPodiumProps) {
           const item = ranked[col.rank - 1];
           return (
             <View key={col.rank} style={styles.col}>
+              {col.rank === 1 && item ? <Crown size={28} color={palette.yellow} fill={palette.yellow} /> : null}
               {item ? (
-                <Animated.Text entering={FadeIn.duration(250)} numberOfLines={1} style={[type.label, { color: colors.text, maxWidth: '100%' }]}>
+                <Animated.Text
+                  entering={FadeIn.duration(250)}
+                  numberOfLines={2}
+                  style={[type.label, { color: colors.text, maxWidth: '100%', textAlign: 'center' }]}>
                   {item.place.name}
                 </Animated.Text>
               ) : null}
               <View style={[styles.bar, { height: col.height, backgroundColor: item ? col.color : colors.surface }]}>
                 {item ? (
                   <>
-                    <Text style={[type.display, { color: '#FFFFFF', fontSize: 30 }]}>{col.rank}</Text>
+                    <View style={styles.rankCircle}>
+                      <Text style={[type.heading, { color: col.color }]}>{col.rank}</Text>
+                    </View>
                     <Text style={[type.label, { color: '#FFFFFF' }]}>{item.yes} yes</Text>
                   </>
                 ) : null}
@@ -166,7 +173,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'flex-start',
     paddingTop: spacing.md,
-    gap: spacing.xs,
+    gap: spacing.sm,
+  },
+  rankCircle: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   row: {
     flexDirection: 'row',

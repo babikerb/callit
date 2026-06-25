@@ -15,7 +15,7 @@ export default function HomeScreen() {
   };
 
   return (
-    <Screen section="home" headline="What are we deciding?" subtitle="Pick a category to start a Call.">
+    <Screen section="home" headline="What Are We Deciding?" subtitle="Pick a category to start a Call.">
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md }}>
         {CATEGORIES.map((category) => (
           <CategoryTile

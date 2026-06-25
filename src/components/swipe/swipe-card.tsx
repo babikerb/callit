@@ -1,4 +1,5 @@
 import { Clock } from 'lucide-react-native';
+import { memo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { StaticMap } from '@/components/swipe/static-map';
@@ -13,8 +14,9 @@ type SwipeCardProps = {
 /**
  * A place card: a real static map up top; name, distance, cuisine, and today's
  * hours below. Tap (handled by the deck) opens the full detail view.
+ * Memoized so swipe-state changes don't re-render it (and re-fetch the map).
  */
-export function SwipeCard({ place }: SwipeCardProps) {
+function SwipeCardImpl({ place }: SwipeCardProps) {
   const cuisine = formatCuisine(place.cuisine);
   const subtitle = [place.distance != null ? `${formatDistance(place.distance)} away` : null, cuisine]
     .filter(Boolean)
@@ -25,7 +27,7 @@ export function SwipeCard({ place }: SwipeCardProps) {
     <View style={styles.card}>
       <StaticMap latitude={place.latitude} longitude={place.longitude} style={styles.map} />
       <View style={styles.footer}>
-        <Text style={[type.title, { color: colors.text }]} numberOfLines={1}>
+        <Text style={[type.title, { color: colors.text }]} numberOfLines={2}>
           {place.name}
         </Text>
         {subtitle ? <Text style={[type.body, { color: colors.textMuted }]}>{subtitle}</Text> : null}
@@ -68,5 +70,7 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
 });
+
+export const SwipeCard = memo(SwipeCardImpl);
 
 export default SwipeCard;

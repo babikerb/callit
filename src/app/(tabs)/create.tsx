@@ -16,7 +16,10 @@ export default function CreateScreen() {
   const [category, setCategory] = useState<string>(params.category ?? 'food');
   const [radiusMiles, setRadiusMiles] = useState(2);
   const [openNow, setOpenNow] = useState(true);
+  const [priceValue, setPriceValue] = useState(100); // 100 = Any
   const [busy, setBusy] = useState(false);
+
+  const maxPrice = priceValue >= 100 ? 0 : priceValue;
 
   // Keep the selection in sync when arriving from Home with a category.
   useEffect(() => {
@@ -30,11 +33,17 @@ export default function CreateScreen() {
       if (!profile) {
         router.push({
           pathname: '/setup',
-          params: { redirect: 'create', category, radius: String(radiusMiles), openNow: openNow ? '1' : '0' },
+          params: {
+            redirect: 'create',
+            category,
+            radius: String(radiusMiles),
+            openNow: openNow ? '1' : '0',
+            price: String(maxPrice),
+          },
         });
         return;
       }
-      const { callId } = await createCall(category, profile, { radiusMiles, openNow });
+      const { callId } = await createCall(category, profile, { radiusMiles, openNow, maxPrice });
       router.push({ pathname: '/lobby', params: { callId, host: '1' } });
     } finally {
       setBusy(false);
@@ -42,7 +51,7 @@ export default function CreateScreen() {
   };
 
   return (
-    <Screen section="create" headline="Start a Call." subtitle="Confirm the category and filters, then share.">
+    <Screen section="create" headline="Let's Callit!" subtitle="Confirm the category and filters, then share.">
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>
         {CATEGORIES.map((c) => {
           const active = category === c.key;
@@ -75,6 +84,12 @@ export default function CreateScreen() {
         </View>
         <Slider min={1} max={15} step={1} value={radiusMiles} onChange={setRadiusMiles} accent={palette.orange} />
 
+        <View style={[styles.row, { marginTop: spacing.lg }]}>
+          <Text style={[type.label, { color: colors.textMuted, textTransform: 'uppercase' }]}>Max price / person</Text>
+          <Text style={[type.body, { color: palette.orange }]}>{priceValue >= 100 ? 'Any' : `$${priceValue}`}</Text>
+        </View>
+        <Slider min={10} max={100} step={5} value={priceValue} onChange={setPriceValue} accent={palette.orange} />
+
         <View style={styles.toggleRow}>
           <Text style={[type.body, { color: colors.text }]}>Open now</Text>
           <Switch
@@ -98,6 +113,11 @@ export default function CreateScreen() {
 }
 
 const styles = {
+  row: {
+    flexDirection: 'row' as const,
+    justifyContent: 'space-between' as const,
+    alignItems: 'center' as const,
+  },
   toggleRow: {
     flexDirection: 'row' as const,
     justifyContent: 'space-between' as const,

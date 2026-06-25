@@ -1,7 +1,16 @@
 import * as Haptics from 'expo-haptics';
-import { useEffect, useState } from 'react';
-import { Dimensions, StyleSheet, Text, View } from 'react-native';
-import Animated, { FadeIn } from 'react-native-reanimated';
+import { useEffect, useState, type ReactNode } from 'react';
+import { Dimensions, StyleSheet, Text, View, type ViewStyle } from 'react-native';
+import Animated, {
+  Easing,
+  FadeIn,
+  interpolate,
+  useAnimatedStyle,
+  useSharedValue,
+  withDelay,
+  withRepeat,
+  withTiming,
+} from 'react-native-reanimated';
 
 import { palette, type } from '@/theme/tokens';
 
@@ -41,16 +50,34 @@ export function ReadyIntro({ label, onDone }: ReadyIntroProps) {
       key={phase}
       entering={FadeIn.duration(280)}
       style={[styles.stage, { backgroundColor: ready ? palette.purple : palette.pink }]}>
-      {/* Static decorative shapes */}
-      <View style={[styles.shape, styles.circle, { top: H * 0.13, right: W * 0.16 }]} />
-      <View style={[styles.shape, styles.square, { bottom: H * 0.15, left: W * 0.16 }]} />
-      <View style={[styles.shape, styles.triangle, { top: H * 0.16, left: W * 0.16 }]} />
-      <View style={[styles.shape, styles.ring, { bottom: H * 0.13, right: W * 0.14 }]} />
+      {/* Slowly drifting decorative shapes */}
+      <FloatingShape style={[styles.circle, { top: H * 0.13, right: W * 0.16 }]} delay={0} />
+      <FloatingShape style={[styles.square, { bottom: H * 0.15, left: W * 0.16 }]} delay={800} />
+      <FloatingShape style={[styles.triangle, { top: H * 0.16, left: W * 0.16 }]} delay={1600} />
+      <FloatingShape style={[styles.ring, { bottom: H * 0.13, right: W * 0.14 }]} delay={2400} />
 
       <Text style={styles.kicker}>DECIDING ON {label.toUpperCase()}</Text>
       <Text style={styles.title}>{ready ? 'Are you ready?' : "Let's Callit!"}</Text>
     </Animated.View>
   );
+}
+
+/** A shape that drifts slowly and continuously (gentle Kahoot-style motion). */
+function FloatingShape({ style, delay, children }: { style: ViewStyle | ViewStyle[]; delay: number; children?: ReactNode }) {
+  const t = useSharedValue(0);
+  useEffect(() => {
+    t.value = withDelay(delay, withRepeat(withTiming(1, { duration: 4200, easing: Easing.inOut(Easing.sin) }), -1, true));
+  }, [delay, t]);
+
+  const drift = useAnimatedStyle(() => ({
+    transform: [
+      { translateY: interpolate(t.value, [0, 1], [-12, 12]) },
+      { translateX: interpolate(t.value, [0, 1], [7, -7]) },
+      { rotate: `${interpolate(t.value, [0, 1], [-5, 5])}deg` },
+    ],
+  }));
+
+  return <Animated.View style={[styles.shape, style, drift]}>{children}</Animated.View>;
 }
 
 const styles = StyleSheet.create({

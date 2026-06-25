@@ -47,11 +47,14 @@ export default function SwipeScreen() {
   const [coords, setCoords] = useState<Coords>(null);
   const [started, setStarted] = useState(false);
   const [voted, setVoted] = useState(false);
-  const [swipeCount, setSwipeCount] = useState(0);
+  // Swipe count tagged with the index it belongs to, so a stale count from the
+  // previous card can never trigger an advance on the new one.
+  const [swipe, setSwipe] = useState({ index: -1, count: 0 });
   const [detail, setDetail] = useState<DeckPlace | null>(null);
 
   const x = useSharedValue(0);
   const y = useSharedValue(0);
+  const lockRef = useRef<number | null>(null); // ci we've already voted on
   const advancedRef = useRef(-1);
 
   const handleStarted = useCallback(() => setStarted(true), []);
@@ -91,34 +94,41 @@ export default function SwipeScreen() {
   const done = call?.status === 'done' || (deck.length > 0 && ci >= deck.length);
   const current = deck[ci];
 
-  // New card: allow swiping again.
+  // New card -> unlock + reset position.
   useEffect(() => {
     setVoted(false);
     x.value = 0;
     y.value = 0;
   }, [ci, x, y]);
 
-  // Count swipes on the current card (reset first to avoid a stale-count auto-advance).
+  // Count swipes for the current card, tagged with its index.
   useEffect(() => {
     if (!callId || done) return;
-    setSwipeCount(0);
-    return subscribeSwipeCount(callId, ci, setSwipeCount);
+    setSwipe({ index: ci, count: 0 });
+    return subscribeSwipeCount(callId, ci, (count) => setSwipe({ index: ci, count }));
   }, [callId, ci, done]);
 
-  // When everyone has swiped this card, advance (guarded).
+  // Advance only when the count is for THIS card and everyone has swiped.
   useEffect(() => {
     if (!callId || done) return;
-    if (people.length > 0 && swipeCount >= people.length && advancedRef.current !== ci) {
+    if (
+      swipe.index === ci &&
+      people.length > 0 &&
+      swipe.count >= people.length &&
+      advancedRef.current !== ci
+    ) {
       advancedRef.current = ci;
       advanceIfReady(callId, ci);
     }
-  }, [swipeCount, people.length, ci, callId, done]);
+  }, [swipe, people.length, ci, callId, done]);
 
   const submitVote = (dir: Decision) => {
-    if (voted || !current || !callId) return;
+    if (!current || !callId) return;
+    if (voted || lockRef.current === ci) return; // synchronous guard against double-fire
+    lockRef.current = ci;
+    setVoted(true);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     castSwipe(callId, ci, current.id, dir);
-    setVoted(true);
     x.value = withSpring(0);
     y.value = withSpring(0);
   };
@@ -155,10 +165,18 @@ export default function SwipeScreen() {
   const yesBadge = useAnimatedStyle(() => ({ opacity: interpolate(x.value, [0, SWIPE_X], [0, 1], 'clamp') }));
   const noBadge = useAnimatedStyle(() => ({ opacity: interpolate(x.value, [-SWIPE_X, 0], [1, 0], 'clamp') }));
 
+  const swipedCount = swipe.index === ci ? swipe.count : 0;
+
   if (!started) {
     return (
       <View style={{ flex: 1, backgroundColor: colors.bg }}>
-        {call ? <ReadyIntro label={label} onDone={handleStarted} /> : <Centered><ActivityIndicator color={colors.textMuted} /></Centered>}
+        {call ? (
+          <ReadyIntro label={label} onDone={handleStarted} />
+        ) : (
+          <Centered>
+            <ActivityIndicator color={colors.textMuted} />
+          </Centered>
+        )}
       </View>
     );
   }
@@ -192,13 +210,7 @@ export default function SwipeScreen() {
         ) : (
           <>
             <View style={styles.deck}>
-              {deck[ci + 1] ? (
-                <Animated.View style={[styles.cardWrap, styles.behindCard]}>
-                  <SwipeCard place={deck[ci + 1]} />
-                </Animated.View>
-              ) : null}
-
-              {current ? (
+              {current && !voted ? (
                 <GestureDetector key={`card-${ci}-${current.id}`} gesture={cardGesture}>
                   <Animated.View style={[styles.cardWrap, topStyle]}>
                     <Animated.View style={[styles.badge, styles.badgeLeft, { borderColor: palette.teal }, yesBadge]}>
@@ -210,19 +222,19 @@ export default function SwipeScreen() {
                     <SwipeCard place={current} />
                   </Animated.View>
                 </GestureDetector>
+              ) : current ? (
+                <View style={[styles.cardWrap, { opacity: 0.5 }]}>
+                  <SwipeCard place={current} />
+                </View>
               ) : null}
             </View>
 
-            {/* Discuss hint */}
-            <Text style={styles.hint}>
-              Everyone votes on the same spot. Tap the card to discuss it.
-            </Text>
+            <Text style={styles.hint}>Everyone votes on the same spot. Tap the card to discuss it.</Text>
 
-            {/* Indicator + actions */}
             <View style={styles.bottom}>
               <View style={styles.progressPill}>
                 <Text style={[type.label, { color: colors.text }]}>
-                  {voted ? 'Waiting for others' : 'Your turn'} · {swipeCount}/{people.length} swiped
+                  {voted ? 'Waiting for others' : 'Your turn'} · {swipedCount}/{people.length} swiped
                 </Text>
               </View>
 
@@ -306,7 +318,6 @@ const styles = StyleSheet.create({
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: spacing.xl },
   deck: { flex: 1, margin: spacing.lg },
   cardWrap: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 },
-  behindCard: { transform: [{ translateY: 16 }, { scale: 0.94 }], opacity: 0.6 },
   badge: {
     position: 'absolute',
     zIndex: 10,
@@ -329,27 +340,4 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
   },
   actions: { flexDirection: 'row', justifyContent: 'center', gap: spacing.xxl },
-  winnerCard: {
-    gap: spacing.xs,
-    padding: spacing.lg,
-    borderRadius: radius.lg,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: palette.pink,
-  },
-  rankRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-    paddingVertical: spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-  },
-  doneButton: {
-    backgroundColor: palette.pink,
-    borderRadius: radius.pill,
-    paddingVertical: 16,
-    alignItems: 'center',
-    marginTop: spacing.md,
-  },
 });

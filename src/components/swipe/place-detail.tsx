@@ -98,10 +98,14 @@ export function PlaceDetail({ place, onClose }: PlaceDetailProps) {
 
 function Action({ icon, label, onPress }: { icon: React.ReactNode; label: string; onPress: () => void }) {
   return (
-    <Pressable onPress={onPress} style={styles.action}>
-      {icon}
-      <Text style={[type.label, { color: colors.text }]}>{label}</Text>
-    </Pressable>
+    <View style={styles.action}>
+      <Pressable onPress={onPress} style={styles.actionCircle}>
+        {icon}
+      </Pressable>
+      <Text style={[type.label, { color: colors.text }]} numberOfLines={1}>
+        {label}
+      </Text>
+    </View>
   );
 }
 
@@ -122,14 +126,15 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   body: { padding: spacing.lg, gap: spacing.sm },
-  actions: { flexDirection: 'row', gap: spacing.md, marginTop: spacing.md },
-  action: {
-    flex: 1,
+  actions: { flexDirection: 'row', justifyContent: 'space-between', marginTop: spacing.lg },
+  action: { flex: 1, alignItems: 'center', gap: spacing.sm },
+  actionCircle: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
     alignItems: 'center',
-    gap: spacing.xs,
-    paddingVertical: spacing.md,
-    borderRadius: radius.lg,
-    backgroundColor: colors.surface,
+    justifyContent: 'center',
+    backgroundColor: colors.surfaceStrong,
     borderWidth: 1,
     borderColor: colors.border,
   },

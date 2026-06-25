@@ -30,6 +30,7 @@ import { randomUUID } from 'expo-crypto';
 import { db } from '@/services/firebase';
 import type { Profile } from '@/services/identity';
 import type { Place } from '@/services/places';
+import { bumpStat } from '@/services/stats';
 
 const DEVICE_KEY = 'callit.deviceId';
 let cachedDeviceId: string | null = null;
@@ -55,7 +56,7 @@ function genCode(): string {
 
 export type CallStatus = 'lobby' | 'swiping' | 'done';
 
-export type CallFilters = { radiusMiles: number; openNow: boolean };
+export type CallFilters = { radiusMiles: number; openNow: boolean; maxPrice?: number };
 
 export type Call = {
   id: string;
@@ -93,6 +94,7 @@ export async function createCall(
     joinedAt: serverTimestamp(),
     done: false,
   });
+  bumpStat('created');
   return { callId: ref.id, code };
 }
 
@@ -108,6 +110,7 @@ export async function joinCall(code: string, profile: Profile): Promise<string> 
     joinedAt: serverTimestamp(),
     done: false,
   });
+  bumpStat('joined');
   return callId;
 }
 
@@ -166,6 +169,7 @@ export async function castSwipe(callId: string, index: number, placeId: string, 
   if (vote === 'yes') {
     await setDoc(doc(db, 'calls', callId, 'tally', placeId), { yes: increment(1) }, { merge: true });
   }
+  bumpStat('votes');
 }
 
 /** How many people have swiped on a given card index. */
