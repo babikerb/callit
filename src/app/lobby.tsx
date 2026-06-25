@@ -148,7 +148,7 @@ export default function LobbyScreen() {
 
           {isHost ? (
             <Button
-              label={starting ? 'Starting…' : 'Start swiping'}
+              label={starting ? 'Starting…' : "Let's Callit!"}
               color={palette.pink}
               disabled={starting}
               style={{ opacity: starting ? 0.6 : 1 }}

@@ -24,7 +24,7 @@ export function PlaceDetail({ place, onClose }: PlaceDetailProps) {
       <SafeAreaView style={{ flex: 1 }} edges={['top', 'bottom']}>
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: spacing.xl }}>
           <View>
-            <StaticMap latitude={place.latitude} longitude={place.longitude} zoom={16} style={styles.map} />
+            <StaticMap latitude={place.latitude} longitude={place.longitude} zoom={15} style={styles.map} />
             <Pressable onPress={onClose} style={styles.close} hitSlop={12}>
               <X size={22} color={colors.text} strokeWidth={2.5} />
             </Pressable>

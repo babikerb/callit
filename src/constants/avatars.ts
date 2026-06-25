@@ -30,8 +30,21 @@ export const AVATARS: Avatar[] = [
   { id: 'Mint', options: { skinColor: ['57d9b5'] } }, // teal
 ];
 
+/** Hidden avatars unlocked only by redeeming a code. */
+export const SECRET_AVATARS: Avatar[] = [
+  {
+    id: 'ShadowDread',
+    options: { skinColor: ['241613'], top: ['dreads01'], hairColor: ['f02f78'] }, // dark skin, pink dreads
+  },
+];
+
+/** Redeem code (uppercase) -> avatar id. */
+export const REDEEM_CODES: Record<string, string> = {
+  CALLITLEGEND: 'ShadowDread',
+};
+
 export const AVATAR_OPTIONS_BY_ID = Object.fromEntries(
-  AVATARS.map((a) => [a.id, a.options ?? {}]),
+  [...AVATARS, ...SECRET_AVATARS].map((a) => [a.id, a.options ?? {}]),
 ) as Record<string, Record<string, unknown>>;
 
 export const randomAvatarId = () => AVATARS[Math.floor(Math.random() * AVATARS.length)].id;

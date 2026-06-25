@@ -26,7 +26,7 @@ function latToTileY(lat: number, z: number) {
  * Reliable static map from raw OpenStreetMap tiles (keyless), centered on the
  * coordinate with a pin. Renders just enough tiles to fill the measured area.
  */
-export function StaticMap({ latitude, longitude, zoom = 15, style }: StaticMapProps) {
+export function StaticMap({ latitude, longitude, zoom = 14, style }: StaticMapProps) {
   const [size, setSize] = useState({ w: 0, h: 0 });
 
   const tiles = useMemo(() => {
@@ -44,7 +44,8 @@ export function StaticMap({ latitude, longitude, zoom = 15, style }: StaticMapPr
           key: `${tx}_${ty}`,
           left: tx * TILE + offX,
           top: ty * TILE + offY,
-          uri: `https://tile.openstreetmap.org/${zoom}/${wx}/${ty}.png`,
+          // CARTO "dark matter" basemap: clean, Apple-Maps-dark style (retina @2x).
+          uri: `https://a.basemaps.cartocdn.com/dark_all/${zoom}/${wx}/${ty}@2x.png`,
         });
       }
     }

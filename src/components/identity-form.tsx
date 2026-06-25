@@ -1,10 +1,10 @@
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Pressable, Text, TextInput, View } from 'react-native';
 
 import { Avatar } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { AVATARS } from '@/constants/avatars';
-import { type Profile } from '@/services/identity';
+import { AVATARS, SECRET_AVATARS } from '@/constants/avatars';
+import { getUnlockedAvatars, redeemCode, type Profile } from '@/services/identity';
 import { NAME_MAX, validateName } from '@/services/profanity';
 import { colors, palette, radius, spacing, type } from '@/theme/tokens';
 
@@ -15,14 +15,38 @@ type IdentityFormProps = {
   onSubmit: (profile: Profile) => void;
 };
 
-/** Name field (moderated) + Kahoot-style avatar picker. */
+/** Name field (moderated) + avatar picker with a redeem-code unlock. */
 export function IdentityForm({ initial, submitLabel, busy, onSubmit }: IdentityFormProps) {
   const [name, setName] = useState(initial.name);
   const [avatarId, setAvatarId] = useState(initial.avatarId);
   const [touched, setTouched] = useState(false);
+  const [unlocked, setUnlocked] = useState<string[]>([]);
+  const [code, setCode] = useState('');
+  const [redeemMsg, setRedeemMsg] = useState<{ ok: boolean; text: string } | null>(null);
+
+  useEffect(() => {
+    getUnlockedAvatars().then(setUnlocked);
+  }, []);
+
+  const avatars = useMemo(
+    () => [...AVATARS, ...SECRET_AVATARS.filter((a) => unlocked.includes(a.id))],
+    [unlocked],
+  );
 
   const error = validateName(name);
   const showError = touched && !!error;
+
+  const onRedeem = async () => {
+    const id = await redeemCode(code);
+    if (id) {
+      setUnlocked((prev) => (prev.includes(id) ? prev : [...prev, id]));
+      setAvatarId(id);
+      setRedeemMsg({ ok: true, text: 'Unlocked! Avatar selected.' });
+      setCode('');
+    } else {
+      setRedeemMsg({ ok: false, text: 'Invalid code' });
+    }
+  };
 
   return (
     <View style={{ gap: spacing.lg }}>
@@ -36,18 +60,7 @@ export function IdentityForm({ initial, submitLabel, busy, onSubmit }: IdentityF
           placeholderTextColor={colors.textMuted}
           maxLength={NAME_MAX}
           autoCapitalize="words"
-          style={[
-            type.body,
-            {
-              color: colors.text,
-              backgroundColor: colors.surface,
-              borderWidth: 1,
-              borderColor: showError ? palette.pink : colors.border,
-              borderRadius: radius.md,
-              paddingHorizontal: spacing.md,
-              paddingVertical: 14,
-            },
-          ]}
+          style={[type.body, inputStyle(showError)]}
         />
         {showError ? <Text style={[type.label, { color: palette.pink }]}>{error}</Text> : null}
       </View>
@@ -55,7 +68,7 @@ export function IdentityForm({ initial, submitLabel, busy, onSubmit }: IdentityF
       <View style={{ gap: spacing.sm }}>
         <Text style={[type.label, { color: colors.textMuted, textTransform: 'uppercase' }]}>Pick an avatar</Text>
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md }}>
-          {AVATARS.map((a) => {
+          {avatars.map((a) => {
             const selected = a.id === avatarId;
             return (
               <Pressable
@@ -74,6 +87,38 @@ export function IdentityForm({ initial, submitLabel, busy, onSubmit }: IdentityF
         </View>
       </View>
 
+      <View style={{ gap: spacing.sm }}>
+        <Text style={[type.label, { color: colors.textMuted, textTransform: 'uppercase' }]}>Redeem a code</Text>
+        <View style={{ flexDirection: 'row', gap: spacing.sm }}>
+          <TextInput
+            value={code}
+            onChangeText={(t) => setCode(t.toUpperCase())}
+            placeholder="Enter code"
+            placeholderTextColor={colors.textMuted}
+            autoCapitalize="characters"
+            autoCorrect={false}
+            style={[type.body, inputStyle(false), { flex: 1 }]}
+          />
+          <Pressable
+            onPress={onRedeem}
+            disabled={!code}
+            style={{
+              paddingHorizontal: spacing.lg,
+              justifyContent: 'center',
+              borderRadius: radius.md,
+              backgroundColor: colors.surfaceStrong,
+              borderWidth: 1,
+              borderColor: colors.border,
+              opacity: code ? 1 : 0.5,
+            }}>
+            <Text style={[type.body, { color: colors.text }]}>Redeem</Text>
+          </Pressable>
+        </View>
+        {redeemMsg ? (
+          <Text style={[type.label, { color: redeemMsg.ok ? palette.teal : palette.pink }]}>{redeemMsg.text}</Text>
+        ) : null}
+      </View>
+
       <Button
         label={submitLabel}
         color={palette.pink}
@@ -86,6 +131,18 @@ export function IdentityForm({ initial, submitLabel, busy, onSubmit }: IdentityF
       />
     </View>
   );
+}
+
+function inputStyle(error: boolean) {
+  return {
+    color: colors.text,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: error ? palette.pink : colors.border,
+    borderRadius: radius.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 14,
+  };
 }
 
 export default IdentityForm;

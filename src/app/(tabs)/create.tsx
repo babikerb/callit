@@ -87,7 +87,7 @@ export default function CreateScreen() {
       </Card>
 
       <Button
-        label={busy ? 'Starting…' : "Let's Callit!"}
+        label={busy ? 'Creating…' : 'Create Call'}
         color={palette.orange}
         disabled={busy}
         style={{ opacity: busy ? 0.6 : 1 }}
