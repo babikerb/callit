@@ -26,12 +26,13 @@ export default function RootLayout() {
         <ThemeProvider value={CallitDark}>
           <StatusBar style="light" />
           <AnimatedSplashOverlay />
-          <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.bg } }}>
+          <Stack
+            screenOptions={{ headerShown: false, gestureEnabled: false, contentStyle: { backgroundColor: colors.bg } }}>
             <Stack.Screen name="(tabs)" />
             <Stack.Screen name="setup" options={{ presentation: 'modal' }} />
             <Stack.Screen name="join" />
-            <Stack.Screen name="lobby" options={{ gestureEnabled: false }} />
-            <Stack.Screen name="swipe" options={{ presentation: 'card', gestureEnabled: false }} />
+            <Stack.Screen name="lobby" />
+            <Stack.Screen name="swipe" />
           </Stack>
         </ThemeProvider>
       </QueryClientProvider>

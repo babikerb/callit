@@ -98,3 +98,55 @@ export function weeklyHours(oh?: string): { day: string; hours: string }[] {
   if (!oh) return [];
   return ORDER.map((code) => ({ day: LABEL[code], hours: hoursForCode(oh, code) ?? 'Unknown' }));
 }
+
+function toMinutes(t: string): number | null {
+  const [h, m] = t.trim().split(':').map(Number);
+  if (Number.isNaN(h)) return null;
+  return h * 60 + (Number.isNaN(m) ? 0 : m);
+}
+
+/** Today's open spans in minutes, 'closed', or null (unknown). */
+function todaySpans(oh: string): [number, number][] | 'closed' | null {
+  if (/24\s*\/\s*7/.test(oh)) return [[0, 1440]];
+  const pos = ORDER.indexOf(jsDayToCode(new Date().getDay()));
+  let result: [number, number][] | 'closed' | null = null;
+  for (const rule of oh.split(';').map((r) => r.trim()).filter(Boolean)) {
+    const m = rule.match(/^([A-Za-z]{2}(?:[-,][A-Za-z]{2})*)\s+(.+)$/);
+    let daysPart: string;
+    let timePart: string;
+    if (m) {
+      daysPart = m[1];
+      timePart = m[2].trim();
+    } else if (/^\d{1,2}:\d{2}/.test(rule)) {
+      daysPart = 'Mo-Su';
+      timePart = rule;
+    } else {
+      continue;
+    }
+    if (!codeInPart(daysPart, pos)) continue;
+    if (/off|closed/i.test(timePart)) {
+      result = 'closed';
+      continue;
+    }
+    const spans = timePart
+      .split(',')
+      .map((s) => s.split('-').map((t) => toMinutes(t)))
+      .filter((p) => p[0] != null && p[1] != null) as [number, number][];
+    if (spans.length) result = spans;
+  }
+  return result;
+}
+
+/** Whether a place is open right now: true, false, or null (unknown). */
+export function isOpenNow(oh?: string): boolean | null {
+  if (!oh) return null;
+  const spans = todaySpans(oh);
+  if (spans === null) return null;
+  if (spans === 'closed') return false;
+  const now = new Date();
+  const mins = now.getHours() * 60 + now.getMinutes();
+  for (const [a, b] of spans) {
+    if (b >= a ? mins >= a && mins < b : mins >= a || mins < b) return true;
+  }
+  return false;
+}

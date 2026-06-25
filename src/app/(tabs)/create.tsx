@@ -1,6 +1,6 @@
 import { router, useLocalSearchParams } from 'expo-router';
-import { useState } from 'react';
-import { Text, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { Pressable, Switch, Text, View } from 'react-native';
 
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -10,26 +10,32 @@ import { createCall } from '@/services/calls';
 import { getProfile } from '@/services/identity';
 import { colors, palette, radius, spacing, type } from '@/theme/tokens';
 
-const FILTERS = [
-  { label: 'Radius', value: '2 mi' },
-  { label: 'Open now', value: 'On' },
-  { label: 'Price', value: 'Any' },
-];
+const RADIUS_OPTIONS = [1, 2, 5, 10];
 
 export default function CreateScreen() {
   const params = useLocalSearchParams<{ category?: string }>();
   const [category, setCategory] = useState<string>(params.category ?? 'food');
+  const [radiusMiles, setRadiusMiles] = useState(2);
+  const [openNow, setOpenNow] = useState(false);
   const [busy, setBusy] = useState(false);
+
+  // Keep the selection in sync when arriving from Home with a category.
+  useEffect(() => {
+    if (params.category) setCategory(params.category);
+  }, [params.category]);
 
   const onCreate = async () => {
     setBusy(true);
     try {
       const profile = await getProfile();
       if (!profile) {
-        router.push({ pathname: '/setup', params: { redirect: 'create', category } });
+        router.push({
+          pathname: '/setup',
+          params: { redirect: 'create', category, radius: String(radiusMiles), openNow: openNow ? '1' : '0' },
+        });
         return;
       }
-      const { callId } = await createCall(category, profile);
+      const { callId } = await createCall(category, profile, { radiusMiles, openNow });
       router.push({ pathname: '/lobby', params: { callId, host: '1' } });
     } finally {
       setBusy(false);
@@ -42,8 +48,9 @@ export default function CreateScreen() {
         {CATEGORIES.map((c) => {
           const active = category === c.key;
           return (
-            <View
+            <Pressable
               key={c.key}
+              onPress={() => setCategory(c.key)}
               style={{
                 flexDirection: 'row',
                 alignItems: 'center',
@@ -54,35 +61,54 @@ export default function CreateScreen() {
                 backgroundColor: active ? colors.surfaceStrong : colors.surface,
                 borderWidth: 1,
                 borderColor: active ? palette.orange : colors.border,
-              }}
-              onTouchEnd={() => setCategory(c.key)}>
+              }}>
               <c.Icon size={16} strokeWidth={2.25} color={active ? palette.orange : colors.text} />
               <Text style={[type.body, { color: active ? palette.orange : colors.text }]}>{c.label}</Text>
-            </View>
+            </Pressable>
           );
         })}
       </View>
 
-      <Card padded={false}>
-        {FILTERS.map((f, i) => (
-          <View
-            key={f.label}
-            style={{
-              flexDirection: 'row',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              padding: spacing.md,
-              borderTopWidth: i === 0 ? 0 : 1,
-              borderTopColor: colors.border,
-            }}>
-            <Text style={[type.body, { color: colors.text }]}>{f.label}</Text>
-            <Text style={[type.body, { color: colors.textMuted }]}>{f.value}</Text>
+      <Card>
+        <Text style={[type.label, { color: colors.textMuted, textTransform: 'uppercase' }]}>Radius</Text>
+        <View style={{ flexDirection: 'row', gap: spacing.sm, marginTop: spacing.sm }}>
+          {RADIUS_OPTIONS.map((mi) => {
+            const active = radiusMiles === mi;
+            return (
+              <Pressable
+                key={mi}
+                onPress={() => setRadiusMiles(mi)}
+                style={{
+                  flex: 1,
+                  alignItems: 'center',
+                  paddingVertical: spacing.sm,
+                  borderRadius: radius.md,
+                  backgroundColor: active ? colors.surfaceStrong : colors.surface,
+                  borderWidth: 1,
+                  borderColor: active ? palette.orange : colors.border,
+                }}>
+                <Text style={[type.body, { color: active ? palette.orange : colors.text }]}>{mi} mi</Text>
+              </Pressable>
+            );
+          })}
+        </View>
+
+        <View style={styles.toggleRow}>
+          <View>
+            <Text style={[type.body, { color: colors.text }]}>Open now</Text>
+            <Text style={[type.label, { color: colors.textMuted }]}>Hide places closed right now</Text>
           </View>
-        ))}
+          <Switch
+            value={openNow}
+            onValueChange={setOpenNow}
+            trackColor={{ true: palette.orange, false: colors.border }}
+            thumbColor="#FFFFFF"
+          />
+        </View>
       </Card>
 
       <Button
-        label={busy ? 'Creating…' : 'Create Call'}
+        label={busy ? 'Starting…' : "Let's Callit!"}
         color={palette.orange}
         disabled={busy}
         style={{ opacity: busy ? 0.6 : 1 }}
@@ -91,3 +117,12 @@ export default function CreateScreen() {
     </Screen>
   );
 }
+
+const styles = {
+  toggleRow: {
+    flexDirection: 'row' as const,
+    justifyContent: 'space-between' as const,
+    alignItems: 'center' as const,
+    marginTop: spacing.lg,
+  },
+};

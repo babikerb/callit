@@ -9,7 +9,12 @@ import { blankProfile, getProfile, saveProfile, type Profile } from '@/services/
 import { colors, spacing, type } from '@/theme/tokens';
 
 export default function SetupScreen() {
-  const params = useLocalSearchParams<{ redirect?: string; category?: string }>();
+  const params = useLocalSearchParams<{
+    redirect?: string;
+    category?: string;
+    radius?: string;
+    openNow?: string;
+  }>();
   const [initial, setInitial] = useState<Profile | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -22,7 +27,8 @@ export default function SetupScreen() {
     try {
       await saveProfile(profile);
       if (params.redirect === 'create' && params.category) {
-        const { callId } = await createCall(params.category, profile);
+        const filters = { radiusMiles: Number(params.radius) || 2, openNow: params.openNow === '1' };
+        const { callId } = await createCall(params.category, profile, filters);
         router.replace({ pathname: '/lobby', params: { callId, host: '1' } });
       } else if (params.redirect === 'join') {
         router.replace('/join');

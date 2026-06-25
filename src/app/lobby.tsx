@@ -17,6 +17,8 @@ import {
   type Call,
   type Participant,
 } from '@/services/calls';
+import { refinePlaces } from '@/services/groq';
+import { isOpenNow } from '@/services/hours';
 import { distanceMeters, fetchNearbyPlaces } from '@/services/places';
 import { colors, palette, radius, spacing, type } from '@/theme/tokens';
 
@@ -70,9 +72,14 @@ export default function LobbyScreen() {
         const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
         coords = { latitude: loc.coords.latitude, longitude: loc.coords.longitude };
       }
-      const raw = await fetchNearbyPlaces(call.category, coords.latitude, coords.longitude);
+      const radiusMeters = (call.filters?.radiusMiles ?? 2) * 1609.34;
+      let raw = await fetchNearbyPlaces(call.category, coords.latitude, coords.longitude, radiusMeters);
+      if (call.filters?.openNow) {
+        // Keep places that are open or have unknown hours (don't punish missing data).
+        raw = raw.filter((p) => isOpenNow(p.openingHours) !== false);
+      }
       const seen = new Set<string>();
-      const places = raw
+      const deduped = raw
         .filter((p) => {
           const key = p.name.trim().toLowerCase();
           if (seen.has(key)) return false;
@@ -80,7 +87,10 @@ export default function LobbyScreen() {
           return true;
         })
         .sort((a, b) => distanceMeters(coords, a) - distanceMeters(coords, b))
-        .slice(0, 20);
+        .slice(0, 25);
+
+      // AI pass: curate + clean names + order best-first (falls back to deduped).
+      const places = (await refinePlaces(call.category, deduped)).slice(0, 20);
       await startSwiping(callId, places);
     } finally {
       setStarting(false);

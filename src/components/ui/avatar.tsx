@@ -1,31 +1,32 @@
-import { View } from 'react-native';
-
-import { AVATAR_BY_ID } from '@/constants/avatars';
-import { palette } from '@/theme/tokens';
+import { avataaars } from '@dicebear/collection';
+import { createAvatar } from '@dicebear/core';
+import { useMemo } from 'react';
+import { SvgXml } from 'react-native-svg';
 
 type AvatarProps = {
   id?: string;
   size?: number;
 };
 
-/** Renders a preset avatar: a brand-colored circle with its line icon. */
+const cache = new Map<string, string>();
+
+function svgForSeed(seed: string): string {
+  const cached = cache.get(seed);
+  if (cached) return cached;
+  const svg = createAvatar(avataaars, {
+    seed,
+    radius: 50,
+    backgroundColor: ['6D28FF', 'F02F78', 'F66314', '38D6B5', 'FBCD12'],
+  }).toString();
+  cache.set(seed, svg);
+  return svg;
+}
+
+/** Renders a humanoid cartoon avatar (DiceBear avataaars) from its seed. */
 export function Avatar({ id, size = 48 }: AvatarProps) {
-  const avatar = id ? AVATAR_BY_ID[id] : undefined;
-  const color = avatar?.color ?? palette.purple;
-  const Icon = avatar?.Icon;
-  return (
-    <View
-      style={{
-        width: size,
-        height: size,
-        borderRadius: size / 2,
-        backgroundColor: color,
-        alignItems: 'center',
-        justifyContent: 'center',
-      }}>
-      {Icon ? <Icon size={size * 0.55} color="#FFFFFF" strokeWidth={2.25} /> : null}
-    </View>
-  );
+  const seed = id || 'callit';
+  const svg = useMemo(() => svgForSeed(seed), [seed]);
+  return <SvgXml xml={svg} width={size} height={size} />;
 }
 
 export default Avatar;

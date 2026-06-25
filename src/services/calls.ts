@@ -19,6 +19,7 @@ import {
   increment,
   onSnapshot,
   query,
+  runTransaction,
   serverTimestamp,
   setDoc,
   updateDoc,
@@ -54,6 +55,8 @@ function genCode(): string {
 
 export type CallStatus = 'lobby' | 'swiping' | 'done';
 
+export type CallFilters = { radiusMiles: number; openNow: boolean };
+
 export type Call = {
   id: string;
   code: string;
@@ -61,12 +64,18 @@ export type Call = {
   status: CallStatus;
   hostId: string;
   places?: Place[];
+  filters?: CallFilters;
+  currentIndex?: number;
 };
 
 export type Participant = { id: string; name: string; avatarId: string; done: boolean };
 
 /** Create a Call and join it as host. */
-export async function createCall(category: string, profile: Profile): Promise<{ callId: string; code: string }> {
+export async function createCall(
+  category: string,
+  profile: Profile,
+  filters: CallFilters,
+): Promise<{ callId: string; code: string }> {
   const hostId = await getDeviceId();
   const code = genCode();
   const ref = await addDoc(collection(db, 'calls'), {
@@ -74,6 +83,8 @@ export async function createCall(category: string, profile: Profile): Promise<{ 
     category,
     status: 'lobby',
     hostId,
+    filters,
+    currentIndex: 0,
     createdAt: serverTimestamp(),
   });
   await setDoc(doc(db, 'calls', ref.id, 'participants', hostId), {
@@ -131,13 +142,15 @@ function stripUndefined<T extends Record<string, unknown>>(obj: T): Partial<T> {
 /** Host locks in the shared deck (so everyone swipes the same places) and starts swiping. */
 export async function startSwiping(callId: string, places: Place[]) {
   const clean = places.map((p) => stripUndefined(p));
-  await updateDoc(doc(db, 'calls', callId), { places: clean, status: 'swiping' });
+  await updateDoc(doc(db, 'calls', callId), { places: clean, status: 'swiping', currentIndex: 0 });
 }
 
-export async function castVote(callId: string, placeId: string, vote: 'yes' | 'no') {
+/** Cast a swipe on the current card (everyone votes on the same index). */
+export async function castSwipe(callId: string, index: number, placeId: string, vote: 'yes' | 'no') {
   const me = await getDeviceId();
-  await setDoc(doc(db, 'calls', callId, 'votes', `${me}_${placeId}`), {
+  await setDoc(doc(db, 'calls', callId, 'swipes', `${me}_${index}`), {
     deviceId: me,
+    index,
     placeId,
     vote,
     at: serverTimestamp(),
@@ -147,9 +160,28 @@ export async function castVote(callId: string, placeId: string, vote: 'yes' | 'n
   }
 }
 
-export async function markDone(callId: string) {
-  const me = await getDeviceId();
-  await updateDoc(doc(db, 'calls', callId, 'participants', me), { done: true });
+/** How many people have swiped on a given card index. */
+export function subscribeSwipeCount(callId: string, index: number, cb: (count: number) => void) {
+  return onSnapshot(query(collection(db, 'calls', callId, 'swipes'), where('index', '==', index)), (snap) => {
+    cb(snap.size);
+  });
+}
+
+/**
+ * Advance to the next card only if everyone has swiped the current one.
+ * Guarded by a transaction so concurrent callers don't double-advance or skip.
+ */
+export async function advanceIfReady(callId: string, expectedIndex: number) {
+  await runTransaction(db, async (tx) => {
+    const ref = doc(db, 'calls', callId);
+    const snap = await tx.get(ref);
+    const data = snap.data();
+    if (!data) return;
+    if ((data.currentIndex ?? 0) !== expectedIndex) return; // already advanced
+    const next = expectedIndex + 1;
+    const total = (data.places as Place[] | undefined)?.length ?? 0;
+    tx.update(ref, { currentIndex: next, ...(next >= total ? { status: 'done' } : {}) });
+  });
 }
 
 /** Live aggregate of yes-votes per placeId. */

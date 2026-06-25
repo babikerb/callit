@@ -46,3 +46,8 @@ example
 GoogleService-Info.plist
 google-services.json
 *.plist.b64
+
+# Local env (Groq key etc.) - never commit
+.env
+.env.local
+.env*.local
