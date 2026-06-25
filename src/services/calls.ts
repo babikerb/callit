@@ -123,9 +123,15 @@ export function subscribeParticipants(callId: string, cb: (people: Participant[]
   });
 }
 
+/** Firestore rejects undefined values, so drop any undefined fields. */
+function stripUndefined<T extends Record<string, unknown>>(obj: T): Partial<T> {
+  return Object.fromEntries(Object.entries(obj).filter(([, v]) => v !== undefined)) as Partial<T>;
+}
+
 /** Host locks in the shared deck (so everyone swipes the same places) and starts swiping. */
 export async function startSwiping(callId: string, places: Place[]) {
-  await updateDoc(doc(db, 'calls', callId), { places, status: 'swiping' });
+  const clean = places.map((p) => stripUndefined(p));
+  await updateDoc(doc(db, 'calls', callId), { places: clean, status: 'swiping' });
 }
 
 export async function castVote(callId: string, placeId: string, vote: 'yes' | 'no') {
