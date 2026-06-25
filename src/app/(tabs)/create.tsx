@@ -5,18 +5,17 @@ import { Pressable, Switch, Text, View } from 'react-native';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Screen } from '@/components/ui/screen';
+import { Slider } from '@/components/ui/slider';
 import { CATEGORIES } from '@/constants/categories';
 import { createCall } from '@/services/calls';
 import { getProfile } from '@/services/identity';
 import { colors, palette, radius, spacing, type } from '@/theme/tokens';
 
-const RADIUS_OPTIONS = [1, 2, 5, 10];
-
 export default function CreateScreen() {
   const params = useLocalSearchParams<{ category?: string }>();
   const [category, setCategory] = useState<string>(params.category ?? 'food');
   const [radiusMiles, setRadiusMiles] = useState(2);
-  const [openNow, setOpenNow] = useState(false);
+  const [openNow, setOpenNow] = useState(true);
   const [busy, setBusy] = useState(false);
 
   // Keep the selection in sync when arriving from Home with a category.
@@ -70,34 +69,14 @@ export default function CreateScreen() {
       </View>
 
       <Card>
-        <Text style={[type.label, { color: colors.textMuted, textTransform: 'uppercase' }]}>Radius</Text>
-        <View style={{ flexDirection: 'row', gap: spacing.sm, marginTop: spacing.sm }}>
-          {RADIUS_OPTIONS.map((mi) => {
-            const active = radiusMiles === mi;
-            return (
-              <Pressable
-                key={mi}
-                onPress={() => setRadiusMiles(mi)}
-                style={{
-                  flex: 1,
-                  alignItems: 'center',
-                  paddingVertical: spacing.sm,
-                  borderRadius: radius.md,
-                  backgroundColor: active ? colors.surfaceStrong : colors.surface,
-                  borderWidth: 1,
-                  borderColor: active ? palette.orange : colors.border,
-                }}>
-                <Text style={[type.body, { color: active ? palette.orange : colors.text }]}>{mi} mi</Text>
-              </Pressable>
-            );
-          })}
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Text style={[type.label, { color: colors.textMuted, textTransform: 'uppercase' }]}>Radius</Text>
+          <Text style={[type.body, { color: palette.orange }]}>{radiusMiles} mi</Text>
         </View>
+        <Slider min={1} max={15} step={1} value={radiusMiles} onChange={setRadiusMiles} accent={palette.orange} />
 
         <View style={styles.toggleRow}>
-          <View>
-            <Text style={[type.body, { color: colors.text }]}>Open now</Text>
-            <Text style={[type.label, { color: colors.textMuted }]}>Hide places closed right now</Text>
-          </View>
+          <Text style={[type.body, { color: colors.text }]}>Open now</Text>
           <Switch
             value={openNow}
             onValueChange={setOpenNow}

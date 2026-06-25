@@ -3,7 +3,7 @@ import * as Location from 'expo-location';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Check, ChevronLeft, X } from 'lucide-react-native';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Dimensions, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Dimensions, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
   interpolate,
@@ -16,6 +16,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { PlaceDetail } from '@/components/swipe/place-detail';
 import { ReadyIntro } from '@/components/swipe/ready-intro';
+import { ResultsPodium } from '@/components/swipe/results-podium';
 import { SwipeCard } from '@/components/swipe/swipe-card';
 import { CATEGORY_BY_KEY } from '@/constants/categories';
 import {
@@ -28,7 +29,7 @@ import {
   type Call,
   type Participant,
 } from '@/services/calls';
-import { distanceMeters, formatDistance, type Place } from '@/services/places';
+import { distanceMeters, type Place } from '@/services/places';
 import { colors, palette, radius, spacing, type } from '@/theme/tokens';
 
 const { width: W } = Dimensions.get('window');
@@ -287,44 +288,8 @@ function GroupResults({ callId, deck }: { callId: string; deck: DeckPlace[] }) {
     () => [...deck].map((p) => ({ place: p, yes: tally[p.id] ?? 0 })).sort((a, b) => b.yes - a.yes),
     [deck, tally],
   );
-  const winner = ranked[0];
 
-  return (
-    <View style={{ flex: 1, padding: spacing.lg }}>
-      <Text style={[type.display, { color: colors.text }]}>The call</Text>
-      <Text style={[type.body, { color: colors.textMuted, marginBottom: spacing.md }]}>Your group's winner.</Text>
-
-      {winner && winner.yes > 0 ? (
-        <View style={styles.winnerCard}>
-          <Text style={[type.label, { color: palette.pink, textTransform: 'uppercase' }]}>Winner</Text>
-          <Text style={[type.title, { color: colors.text }]} numberOfLines={1}>
-            {winner.place.name}
-          </Text>
-          <Text style={[type.body, { color: colors.textMuted }]}>
-            {winner.yes} {winner.yes === 1 ? 'yes' : 'yeses'}
-            {winner.place.distance != null ? `  ·  ${formatDistance(winner.place.distance)}` : ''}
-          </Text>
-        </View>
-      ) : (
-        <Text style={[type.body, { color: colors.textMuted }]}>No yes votes. Run it back.</Text>
-      )}
-
-      <ScrollView showsVerticalScrollIndicator={false} style={{ flex: 1, marginTop: spacing.md }}>
-        {ranked.slice(1).map(({ place, yes }) => (
-          <View key={place.id} style={styles.rankRow}>
-            <Text style={[type.body, { color: colors.text, flex: 1 }]} numberOfLines={1}>
-              {place.name}
-            </Text>
-            <Text style={[type.label, { color: colors.textMuted }]}>{yes}</Text>
-          </View>
-        ))}
-      </ScrollView>
-
-      <Pressable onPress={() => router.replace('/')} style={styles.doneButton}>
-        <Text style={[type.heading, { color: colors.text }]}>Done</Text>
-      </Pressable>
-    </View>
-  );
+  return <ResultsPodium ranked={ranked} onDone={() => router.replace('/')} />;
 }
 
 const styles = StyleSheet.create({

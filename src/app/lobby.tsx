@@ -108,16 +108,16 @@ export default function LobbyScreen() {
             <Text style={[type.display, { color: colors.text }]}>Lobby</Text>
           </View>
 
-          {/* Code + share */}
-          <Pressable onPress={onShare} style={styles.codeCard}>
-            <View>
-              <Text style={[type.label, { color: colors.textMuted, textTransform: 'uppercase' }]}>Share code</Text>
-              <Text style={[type.display, { color: colors.text, letterSpacing: 6 }]}>{call?.code ?? '····'}</Text>
-            </View>
-            <View style={styles.shareBtn}>
-              <Share2 size={20} color={colors.text} strokeWidth={2.5} />
-              <Text style={[type.label, { color: colors.text }]}>Share</Text>
-            </View>
+          {/* Code */}
+          <View style={styles.codeCard}>
+            <Text style={[type.label, { color: colors.textMuted, textTransform: 'uppercase' }]}>Share code</Text>
+            <Text style={[type.display, { color: colors.text, letterSpacing: 8 }]}>{call?.code ?? '····'}</Text>
+          </View>
+
+          {/* Share button */}
+          <Pressable onPress={onShare} style={styles.shareButton}>
+            <Share2 size={18} color={colors.text} strokeWidth={2.5} />
+            <Text style={[type.heading, { color: colors.text }]}>Share invite</Text>
           </Pressable>
 
           {/* Participants */}
@@ -161,17 +161,23 @@ export default function LobbyScreen() {
 
 const styles = {
   codeCard: {
-    flexDirection: 'row' as const,
     alignItems: 'center' as const,
-    justifyContent: 'space-between' as const,
+    gap: spacing.xs,
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.border,
     borderRadius: radius.lg,
-    padding: spacing.lg,
+    paddingVertical: spacing.lg,
   },
-  shareBtn: {
+  shareButton: {
+    flexDirection: 'row' as const,
     alignItems: 'center' as const,
-    gap: spacing.xs,
+    justifyContent: 'center' as const,
+    gap: spacing.sm,
+    backgroundColor: colors.surfaceStrong,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.pill,
+    paddingVertical: 16,
   },
 };
