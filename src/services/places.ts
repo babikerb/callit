@@ -28,6 +28,10 @@ const FILTERS: Record<string, string[]> = {
     'node["leisure"="bowling_alley"]',
     'node["amenity"="cinema"]',
     'node["leisure"="amusement_arcade"]',
+    'node["leisure"="escape_game"]',
+    'node["leisure"="trampoline_park"]',
+    'node["leisure"="miniature_golf"]',
+    'node["tourism"="museum"]',
   ],
   // Fallback for any unknown category key.
   anything: ['node["amenity"="restaurant"]', 'node["amenity"="cafe"]', 'node["amenity"="fast_food"]'],

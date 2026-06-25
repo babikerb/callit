@@ -9,9 +9,10 @@ import { Avatar } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { CATEGORY_BY_KEY } from '@/constants/categories';
 import {
+  beginCall,
   callLink,
   getDeviceId,
-  startSwiping,
+  setCallPlaces,
   subscribeCall,
   subscribeParticipants,
   type Call,
@@ -65,36 +66,41 @@ export default function LobbyScreen() {
   const onStart = async () => {
     if (!call || !callId) return;
     setStarting(true);
-    try {
-      let coords = { latitude: 37.7749, longitude: -122.4194 };
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status === 'granted') {
-        const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
-        coords = { latitude: loc.coords.latitude, longitude: loc.coords.longitude };
-      }
-      const radiusMeters = (call.filters?.radiusMiles ?? 2) * 1609.34;
-      let raw = await fetchNearbyPlaces(call.category, coords.latitude, coords.longitude, radiusMeters);
-      if (call.filters?.openNow) {
-        // Keep places that are open or have unknown hours (don't punish missing data).
-        raw = raw.filter((p) => isOpenNow(p.openingHours) !== false);
-      }
-      const seen = new Set<string>();
-      const deduped = raw
-        .filter((p) => {
-          const key = p.name.trim().toLowerCase();
-          if (seen.has(key)) return false;
-          seen.add(key);
-          return true;
-        })
-        .sort((a, b) => distanceMeters(coords, a) - distanceMeters(coords, b))
-        .slice(0, 25);
+    const category = call.category;
+    const label = CATEGORY_BY_KEY[category]?.label ?? category;
+    const filters = call.filters;
 
-      // AI pass: curate + clean names + order best-first (falls back to deduped).
-      const places = (await refinePlaces(call.category, deduped)).slice(0, 20);
-      await startSwiping(callId, places);
-    } finally {
-      setStarting(false);
-    }
+    // Fetch + AI-enrich in the background while everyone watches the intro.
+    (async () => {
+      try {
+        let coords = { latitude: 37.7749, longitude: -122.4194 };
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        if (status === 'granted') {
+          const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+          coords = { latitude: loc.coords.latitude, longitude: loc.coords.longitude };
+        }
+        const radiusMeters = (filters?.radiusMiles ?? 2) * 1609.34;
+        let raw = await fetchNearbyPlaces(category, coords.latitude, coords.longitude, radiusMeters);
+        if (filters?.openNow) raw = raw.filter((p) => isOpenNow(p.openingHours) !== false);
+        const seen = new Set<string>();
+        const deduped = raw
+          .filter((p) => {
+            const key = p.name.trim().toLowerCase();
+            if (seen.has(key)) return false;
+            seen.add(key);
+            return true;
+          })
+          .sort((a, b) => distanceMeters(coords, a) - distanceMeters(coords, b))
+          .slice(0, 25);
+        const places = (await refinePlaces(label, deduped)).slice(0, 20);
+        await setCallPlaces(callId, places);
+      } catch {
+        // leave the deck empty; the swipe screen shows a finding state
+      }
+    })();
+
+    // Send everyone into the swipe screen (intro) right away.
+    await beginCall(callId);
   };
 
   return (

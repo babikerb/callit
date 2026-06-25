@@ -1,13 +1,14 @@
 import * as Haptics from 'expo-haptics';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Dimensions, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import Animated, { FadeIn, SlideInDown } from 'react-native-reanimated';
+import Animated, { FadeIn } from 'react-native-reanimated';
 import ConfettiCannon from 'react-native-confetti-cannon';
 
-import { formatDistance, type Place } from '@/services/places';
+import { type Place } from '@/services/places';
 import { colors, palette, radius, spacing, type } from '@/theme/tokens';
 
 const { width: W } = Dimensions.get('window');
+const RED = '#C0182F';
 
 type Ranked = { place: Place & { distance?: number }; yes: number };
 
@@ -18,37 +19,69 @@ type ResultsPodiumProps = {
 
 // Podium order on screen: 2nd (left), 1st (center, tallest), 3rd (right).
 const COLUMNS = [
-  { rank: 2, height: 116, color: palette.teal, revealAt: 2 },
-  { rank: 1, height: 168, color: palette.pink, revealAt: 3 },
-  { rank: 3, height: 90, color: palette.orange, revealAt: 1 },
+  { rank: 2, height: 116, color: palette.teal },
+  { rank: 1, height: 168, color: palette.pink },
+  { rank: 3, height: 90, color: palette.orange },
 ];
 
-/** Dramatic Kahoot-style podium reveal: 3rd, then 2nd, then the winner + confetti. */
+/**
+ * Kahoot-style reveal: a red "curtain" stage counts down the placements
+ * (3rd, then 2nd, then the winner), then lifts to show the podium + full list.
+ */
 export function ResultsPodium({ ranked, onDone }: ResultsPodiumProps) {
-  const [step, setStep] = useState(0);
-
-  useEffect(() => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    const timers = [
-      setTimeout(() => {
-        setStep(1);
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      }, 500),
-      setTimeout(() => {
-        setStep(2);
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-      }, 1300),
-      setTimeout(() => {
-        setStep(3);
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      }, 2200),
-    ];
-    return () => timers.forEach(clearTimeout);
-  }, []);
+  const sequence = useMemo(() => [3, 2, 1].filter((r) => ranked[r - 1]), [ranked]);
+  const [revealStep, setRevealStep] = useState(0);
+  const [showPodium, setShowPodium] = useState(false);
 
   const winner = ranked[0];
-  const hasVotes = winner && winner.yes > 0;
+  const hasVotes = !!winner && winner.yes > 0;
 
+  useEffect(() => {
+    if (!ranked.length) {
+      setShowPodium(true);
+      return;
+    }
+    const timers: ReturnType<typeof setTimeout>[] = [];
+    let i = 0;
+    const tick = () => {
+      i += 1;
+      setRevealStep(i);
+      Haptics.impactAsync(
+        i === sequence.length ? Haptics.ImpactFeedbackStyle.Heavy : Haptics.ImpactFeedbackStyle.Light,
+      );
+      if (i < sequence.length) timers.push(setTimeout(tick, 1100));
+      else timers.push(setTimeout(() => setShowPodium(true), 1700));
+    };
+    timers.push(setTimeout(tick, 700));
+    return () => timers.forEach(clearTimeout);
+  }, [ranked.length, sequence.length]);
+
+  // Red curtain countdown
+  if (!showPodium) {
+    const rank = sequence[revealStep - 1];
+    const item = rank ? ranked[rank - 1] : undefined;
+    return (
+      <View style={styles.stage}>
+        <Text style={styles.curtainKicker}>RESULTS</Text>
+        {item ? (
+          <Animated.View key={rank} entering={FadeIn.duration(260)} style={{ alignItems: 'center', gap: spacing.sm }}>
+            <Text style={styles.rankBig}>#{rank}</Text>
+            <Text style={styles.revealName} numberOfLines={2}>
+              {item.place.name}
+            </Text>
+            <Text style={styles.revealVotes}>{item.yes} yes</Text>
+          </Animated.View>
+        ) : (
+          <Text style={styles.revealName}>Counting the votes…</Text>
+        )}
+        {revealStep === sequence.length && hasVotes ? (
+          <ConfettiCannon count={130} origin={{ x: W / 2, y: -20 }} autoStart fadeOut explosionSpeed={360} fallSpeed={3000} />
+        ) : null}
+      </View>
+    );
+  }
+
+  // Podium + ranking
   return (
     <View style={{ flex: 1 }}>
       <View style={{ paddingHorizontal: spacing.lg }}>
@@ -58,37 +91,29 @@ export function ResultsPodium({ ranked, onDone }: ResultsPodiumProps) {
         </Text>
       </View>
 
-      {/* Podium */}
       <View style={styles.podium}>
         {COLUMNS.map((col) => {
           const item = ranked[col.rank - 1];
-          const revealed = step >= col.revealAt && !!item && item.yes >= 0;
           return (
             <View key={col.rank} style={styles.col}>
-              {revealed && item ? (
-                <>
-                  <Animated.Text
-                    entering={FadeIn.duration(200)}
-                    numberOfLines={1}
-                    style={[type.label, { color: colors.text, maxWidth: '100%' }]}>
-                    {item.place.name}
-                  </Animated.Text>
-                  <Animated.View
-                    entering={SlideInDown.springify().damping(15)}
-                    style={[styles.bar, { height: col.height, backgroundColor: col.color }]}>
+              {item ? (
+                <Animated.Text entering={FadeIn.duration(250)} numberOfLines={1} style={[type.label, { color: colors.text, maxWidth: '100%' }]}>
+                  {item.place.name}
+                </Animated.Text>
+              ) : null}
+              <View style={[styles.bar, { height: col.height, backgroundColor: item ? col.color : colors.surface }]}>
+                {item ? (
+                  <>
                     <Text style={[type.display, { color: '#FFFFFF', fontSize: 30 }]}>{col.rank}</Text>
                     <Text style={[type.label, { color: '#FFFFFF' }]}>{item.yes} yes</Text>
-                  </Animated.View>
-                </>
-              ) : (
-                <View style={[styles.bar, { height: col.height, backgroundColor: colors.surface }]} />
-              )}
+                  </>
+                ) : null}
+              </View>
             </View>
           );
         })}
       </View>
 
-      {/* Rest of the ranking */}
       <ScrollView
         showsVerticalScrollIndicator={false}
         style={{ flex: 1 }}
@@ -109,15 +134,23 @@ export function ResultsPodium({ ranked, onDone }: ResultsPodiumProps) {
           <Text style={[type.heading, { color: colors.text }]}>Done</Text>
         </Pressable>
       </View>
-
-      {step >= 3 && hasVotes ? (
-        <ConfettiCannon count={130} origin={{ x: W / 2, y: -20 }} autoStart fadeOut explosionSpeed={360} fallSpeed={3000} />
-      ) : null}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
+  stage: {
+    flex: 1,
+    backgroundColor: RED,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.lg,
+    padding: spacing.xl,
+  },
+  curtainKicker: { ...type.label, color: 'rgba(255,255,255,0.85)', letterSpacing: 3, position: 'absolute', top: 80 },
+  rankBig: { fontFamily: type.display.fontFamily, fontWeight: '900', fontSize: 72, color: '#FFFFFF' },
+  revealName: { ...type.title, color: '#FFFFFF', textAlign: 'center' },
+  revealVotes: { ...type.body, color: 'rgba(255,255,255,0.85)' },
   podium: {
     flexDirection: 'row',
     alignItems: 'flex-end',

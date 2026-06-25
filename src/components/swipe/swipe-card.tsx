@@ -1,7 +1,7 @@
-import { Image } from 'expo-image';
 import { Clock } from 'lucide-react-native';
 import { StyleSheet, Text, View } from 'react-native';
 
+import { StaticMap } from '@/components/swipe/static-map';
 import { todaysHours } from '@/services/hours';
 import { formatCuisine, formatDistance, type Place } from '@/services/places';
 import { colors, radius, spacing, type } from '@/theme/tokens';
@@ -9,11 +9,6 @@ import { colors, radius, spacing, type } from '@/theme/tokens';
 type SwipeCardProps = {
   place: Place & { distance?: number };
 };
-
-/** Keyless OpenStreetMap static map centered on the place, with a marker. */
-export function staticMapUrl(lat: number, lon: number, size = '600x500') {
-  return `https://staticmap.openstreetmap.de/staticmap.php?center=${lat},${lon}&zoom=16&size=${size}&maptype=mapnik&markers=${lat},${lon},red-pushpin`;
-}
 
 /**
  * A place card: a real static map up top; name, distance, cuisine, and today's
@@ -28,12 +23,7 @@ export function SwipeCard({ place }: SwipeCardProps) {
 
   return (
     <View style={styles.card}>
-      <Image
-        source={{ uri: staticMapUrl(place.latitude, place.longitude) }}
-        style={styles.map}
-        contentFit="cover"
-        transition={200}
-      />
+      <StaticMap latitude={place.latitude} longitude={place.longitude} style={styles.map} />
       <View style={styles.footer}>
         <Text style={[type.title, { color: colors.text }]} numberOfLines={1}>
           {place.name}

@@ -139,10 +139,18 @@ function stripUndefined<T extends Record<string, unknown>>(obj: T): Partial<T> {
   return Object.fromEntries(Object.entries(obj).filter(([, v]) => v !== undefined)) as Partial<T>;
 }
 
-/** Host locks in the shared deck (so everyone swipes the same places) and starts swiping. */
-export async function startSwiping(callId: string, places: Place[]) {
+/**
+ * Move everyone into swiping immediately (intro plays) before the deck exists,
+ * so the host can fetch + AI-enrich places in the background.
+ */
+export async function beginCall(callId: string) {
+  await updateDoc(doc(db, 'calls', callId), { status: 'swiping', currentIndex: 0, places: [] });
+}
+
+/** Host writes the shared, enriched deck once it's ready. */
+export async function setCallPlaces(callId: string, places: Place[]) {
   const clean = places.map((p) => stripUndefined(p));
-  await updateDoc(doc(db, 'calls', callId), { places: clean, status: 'swiping', currentIndex: 0 });
+  await updateDoc(doc(db, 'calls', callId), { places: clean });
 }
 
 /** Cast a swipe on the current card (everyone votes on the same index). */

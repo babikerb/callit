@@ -1,11 +1,10 @@
-import { Image } from 'expo-image';
-import { Globe, MapPin, Phone, X } from 'lucide-react-native';
+import { Globe, MapPin, Phone, Utensils, X } from 'lucide-react-native';
 import { Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import { showLocation } from 'react-native-map-link';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { staticMapUrl } from '@/components/swipe/swipe-card';
+import { StaticMap } from '@/components/swipe/static-map';
 import { isToday, weeklyHours } from '@/services/hours';
 import { formatCuisine, formatDistance, type Place } from '@/services/places';
 import { colors, palette, radius, spacing, type } from '@/theme/tokens';
@@ -25,12 +24,7 @@ export function PlaceDetail({ place, onClose }: PlaceDetailProps) {
       <SafeAreaView style={{ flex: 1 }} edges={['top', 'bottom']}>
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: spacing.xl }}>
           <View>
-            <Image
-              source={{ uri: staticMapUrl(place.latitude, place.longitude, '600x400') }}
-              style={styles.map}
-              contentFit="cover"
-              transition={200}
-            />
+            <StaticMap latitude={place.latitude} longitude={place.longitude} zoom={16} style={styles.map} />
             <Pressable onPress={onClose} style={styles.close} hitSlop={12}>
               <X size={22} color={colors.text} strokeWidth={2.5} />
             </Pressable>
@@ -49,6 +43,15 @@ export function PlaceDetail({ place, onClose }: PlaceDetailProps) {
                 icon={<MapPin size={20} color={palette.pink} strokeWidth={2.5} />}
                 label="Directions"
                 onPress={() => showLocation({ latitude: place.latitude, longitude: place.longitude, title: place.name })}
+              />
+              <Action
+                icon={<Utensils size={20} color={palette.yellow} strokeWidth={2.5} />}
+                label="Menu"
+                onPress={() =>
+                  Linking.openURL(
+                    place.website ?? `https://www.google.com/search?q=${encodeURIComponent(`${place.name} menu`)}`,
+                  )
+                }
               />
               {place.website ? (
                 <Action

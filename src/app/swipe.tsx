@@ -183,6 +183,9 @@ export default function SwipeScreen() {
         {!deck.length ? (
           <Centered>
             <ActivityIndicator color={colors.textMuted} />
+            <Text style={[type.body, { color: colors.textMuted, marginTop: spacing.md }]}>
+              Finding the best {label.toLowerCase()} spots…
+            </Text>
           </Centered>
         ) : done ? (
           <GroupResults callId={callId} deck={deck} />
@@ -196,7 +199,7 @@ export default function SwipeScreen() {
               ) : null}
 
               {current ? (
-                <GestureDetector gesture={cardGesture}>
+                <GestureDetector key={`card-${ci}-${current.id}`} gesture={cardGesture}>
                   <Animated.View style={[styles.cardWrap, topStyle]}>
                     <Animated.View style={[styles.badge, styles.badgeLeft, { borderColor: palette.teal }, yesBadge]}>
                       <Text style={[type.heading, { color: palette.teal }]}>YES</Text>
